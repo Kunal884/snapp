@@ -1,0 +1,437 @@
+# # Bank Customer Churn Prediction Using a Neural Network
+# 
+# **Objective:** Predict whether a bank customer will leave (`Exited = 1`) or stay (`Exited = 0`) using the Kaggle Bank Customer Churn Modelling dataset.
+# 
+# This notebook follows the assignment steps: load the dataset, separate features and target, split the data, normalize the features, build and improve a neural-network classifier, and evaluate it with accuracy and a confusion matrix.
+# 
+# **Note:** The dataset contains an `Exited` label but does not provide a separate time-to-churn field. The model therefore predicts the supplied churn label; it cannot independently verify a six-month prediction horizon.
+
+# ## 1. Import libraries
+# 
+# This corrected version uses Scikit-learn's `MLPClassifier`, which is a multilayer perceptron neural network. It avoids the TensorFlow/Keras installation problem recorded in the original notebook, while still satisfying the neural-network classifier requirement.
+# 
+# Install the dependencies once, if needed:
+# 
+# ```bash
+# pip install pandas numpy matplotlib seaborn scikit-learn
+# ```
+
+# ===== CELL 1 =====
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from IPython.display import display
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.utils import resample
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+)
+
+RANDOM_STATE = 42
+
+
+# ## 2. Read the dataset
+
+# ===== CELL 2 =====
+# Keep Churn_Modelling.csv in the same folder as this notebook,
+# or change the path below to the location of your CSV file.
+DATA_PATH = Path("Churn_Modelling.csv")
+
+if not DATA_PATH.is_file():
+    raise FileNotFoundError(
+        f"Could not find {DATA_PATH.resolve()}. "
+        "Place Churn_Modelling.csv in the notebook folder or update DATA_PATH."
+    )
+
+df = pd.read_csv(DATA_PATH)
+
+print("Dataset shape:", df.shape)
+display(df.head())
+
+
+# ===== CELL 3 =====
+# Basic dataset checks
+print("Dataset information:")
+df.info()
+
+print("\\nMissing values in each column:")
+display(df.isnull().sum())
+
+print("\\nDuplicate rows:", df.duplicated().sum())
+
+
+# ## 3. Preprocess the data and separate features and target
+
+# ===== CELL 4 =====
+# These columns identify a customer or row; they are not model features.
+columns_to_drop = ["RowNumber", "CustomerId", "Surname"]
+
+# Drop only identifier columns that are present.
+df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
+
+# Confirm that the target and expected predictors exist.
+required_columns = [
+    "CreditScore", "Geography", "Gender", "Age", "Tenure",
+    "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember",
+    "EstimatedSalary", "Exited"
+]
+missing_columns = [col for col in required_columns if col not in df.columns]
+if missing_columns:
+    raise ValueError(f"Dataset is missing required columns: {missing_columns}")
+
+# Handle missing values if present.
+for col in df.select_dtypes(include=np.number).columns:
+    df[col] = df[col].fillna(df[col].median())
+
+for col in df.select_dtypes(exclude=np.number).columns:
+    mode_values = df[col].mode()
+    if not mode_values.empty:
+        df[col] = df[col].fillna(mode_values.iloc[0])
+
+# Separate target and input features.
+y = df["Exited"].astype(int)
+X = df.drop(columns=["Exited"])
+
+# Convert Geography and Gender into numeric dummy variables.
+# drop_first=True avoids redundant dummy columns.
+X = pd.get_dummies(
+    X,
+    columns=["Geography", "Gender"],
+    drop_first=True,
+    dtype=int
+)
+
+print("Feature matrix shape:", X.shape)
+print("Target shape:", y.shape)
+print("\\nTarget distribution:")
+display(y.value_counts().rename(index={0: "Stayed (0)", 1: "Exited (1)"}))
+
+
+# ## 4. Visualize selected features
+
+# ===== CELL 5 =====
+def plot_churn_distribution(feature_name):
+    plt.figure(figsize=(8, 4))
+    sns.histplot(
+        data=df,
+        x=feature_name,
+        hue="Exited",
+        bins=25,
+        multiple="layer",
+        stat="count",
+        common_norm=False,
+        alpha=0.5
+    )
+    plt.title(f"{feature_name} distribution by churn status")
+    plt.xlabel(feature_name)
+    plt.ylabel("Number of customers")
+    plt.tight_layout()
+    plt.show()
+
+plot_churn_distribution("Tenure")
+plot_churn_distribution("Age")
+
+
+# ## 5. Split the dataset into training and testing sets
+
+# ===== CELL 6 =====
+# 70% training data and 30% testing data, preserving the churn ratio.
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.30,
+    random_state=RANDOM_STATE,
+    stratify=y
+)
+
+print("Training features:", X_train.shape)
+print("Testing features:", X_test.shape)
+print("Training target:", y_train.shape)
+print("Testing target:", y_test.shape)
+
+
+# ## 6. Normalize the training and testing data
+# 
+# Fit `StandardScaler` on the training data only. Use that same fitted scaler to transform the test data. This prevents information from the test set leaking into training.
+
+# ===== CELL 7 =====
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+print("Scaled training data:", X_train_scaled.shape)
+print("Scaled testing data:", X_test_scaled.shape)
+
+
+# ## 7. Build and train the baseline neural network
+# 
+# The baseline model is a multilayer perceptron with two hidden layers. The output layer uses a sigmoid-like probability (`predict_proba`) for the two churn classes.
+
+# ===== CELL 8 =====
+baseline_model = MLPClassifier(
+    hidden_layer_sizes=(6, 6),
+    activation="relu",
+    solver="adam",
+    alpha=0.0001,
+    max_iter=400,
+    random_state=RANDOM_STATE,
+    early_stopping=True,
+    validation_fraction=0.15,
+    n_iter_no_change=15
+)
+
+baseline_model.fit(X_train_scaled, y_train)
+
+baseline_predictions = baseline_model.predict(X_test_scaled)
+baseline_accuracy = accuracy_score(y_test, baseline_predictions)
+
+print(f"Baseline model accuracy: {baseline_accuracy:.4f} ({baseline_accuracy * 100:.2f}%)")
+
+
+# ## 8. Improve the model
+# 
+# The target is usually imbalanced: fewer customers leave than stay. The improved model therefore:
+# 
+# 1. **Balances the training data** by oversampling the minority class (training data only).
+# 2. Uses more hidden neurons to learn more complex patterns.
+# 3. Uses L2 regularization (`alpha`) to reduce overfitting.
+# 4. Uses early stopping to stop training when validation performance stops improving.
+# 
+# The test set is not oversampled, so evaluation reflects the original customer distribution.
+
+# ===== CELL 9 =====
+# Combine scaled training features and labels temporarily for resampling.
+train_for_resampling = pd.DataFrame(
+    X_train_scaled,
+    columns=X_train.columns
+)
+train_for_resampling["Exited"] = y_train.to_numpy()
+
+class_counts = train_for_resampling["Exited"].value_counts()
+majority_class = class_counts.idxmax()
+minority_class = class_counts.idxmin()
+
+majority_rows = train_for_resampling[
+    train_for_resampling["Exited"] == majority_class
+]
+minority_rows = train_for_resampling[
+    train_for_resampling["Exited"] == minority_class
+]
+
+# Increase the minority class to match the majority class.
+minority_oversampled = resample(
+    minority_rows,
+    replace=True,
+    n_samples=len(majority_rows),
+    random_state=RANDOM_STATE
+)
+
+balanced_train = pd.concat(
+    [majority_rows, minority_oversampled],
+    ignore_index=True
+).sample(frac=1, random_state=RANDOM_STATE)
+
+X_train_balanced = balanced_train.drop(columns=["Exited"]).to_numpy()
+y_train_balanced = balanced_train["Exited"].to_numpy()
+
+print("Original training class counts:")
+display(y_train.value_counts())
+print("Balanced training class counts:")
+display(pd.Series(y_train_balanced).value_counts())
+
+
+# ===== CELL 10 =====
+improved_model = MLPClassifier(
+    hidden_layer_sizes=(64, 32, 16),
+    activation="relu",
+    solver="adam",
+    alpha=0.001,
+    learning_rate_init=0.001,
+    max_iter=500,
+    random_state=RANDOM_STATE,
+    early_stopping=True,
+    validation_fraction=0.15,
+    n_iter_no_change=20
+)
+
+improved_model.fit(X_train_balanced, y_train_balanced)
+
+print("Improved neural network training completed.")
+print("Training iterations:", improved_model.n_iter_)
+
+
+# ## 9. Evaluate the model: accuracy score and confusion matrix
+
+# ===== CELL 11 =====
+# Predict the test set. predict() returns a one-dimensional class label array.
+y_pred = improved_model.predict(X_test_scaled)
+
+accuracy = accuracy_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+
+print(f"Improved model accuracy: {accuracy:.4f} ({accuracy * 100:.2f}%)")
+print("\\nConfusion matrix (rows = actual, columns = predicted):")
+print(cm)
+
+print("\\nClassification report:")
+print(
+    classification_report(
+        y_test,
+        y_pred,
+        labels=[0, 1],
+        target_names=["Customer Stayed", "Customer Exited"],
+        zero_division=0
+    )
+)
+
+
+# ===== CELL 12 =====
+plt.figure(figsize=(6, 5))
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=["Stayed (0)", "Exited (1)"],
+    yticklabels=["Stayed (0)", "Exited (1)"]
+)
+plt.xlabel("Predicted label")
+plt.ylabel("Actual label")
+plt.title("Bank Customer Churn - Confusion Matrix")
+plt.tight_layout()
+plt.show()
+
+
+# ## 10. Plot the training loss and compare models
+
+# ===== CELL 13 =====
+plt.figure(figsize=(8, 4))
+plt.plot(improved_model.loss_curve_)
+plt.xlabel("Training iteration")
+plt.ylabel("Loss")
+plt.title("Improved Neural Network Training Loss")
+plt.tight_layout()
+plt.show()
+
+print(f"Baseline accuracy : {baseline_accuracy * 100:.2f}%")
+print(f"Improved accuracy : {accuracy * 100:.2f}%")
+
+
+# ## Conclusion
+# 
+# A neural-network-based classifier was developed to predict whether a bank customer will stay or exit. The dataset was cleaned, categorical variables were encoded, and the features were normalized. The data was divided into training and testing sets.
+# 
+# The baseline MLP model was improved using minority-class oversampling, additional hidden layers, L2 regularization, and early stopping. The final model was evaluated using accuracy, a classification report, and a confusion matrix.
+# 
+# **Important:** Run all cells from top to bottom after placing `Churn_Modelling.csv` beside this notebook. The accuracy and confusion matrix printed by the notebook are the actual results for the dataset used; they should be copied into the assignment rather than estimated in advance.
+
+# ==============================================================================
+# THEORY, VIVA Q&A, ALGORITHM AND COMPLEXITY - ASSIGNMENT 3 (Bank Customer Churn, Neural Network Classifier)
+#
+# 1. WHAT THIS PRACTICAL DOES
+# Goal: predict whether a bank customer will leave (Exited = 1) or stay (Exited = 0) using a neural network.
+# Dataset: Churn_Modelling.csv, 10,000 customers, about 20% of whom left (class imbalance).
+# Steps in the code:
+#  a) Load the data, check nulls, drop identifier columns RowNumber, CustomerId, Surname.
+#  b) Visualise Tenure and Age against churn with histograms.
+#  c) Convert the categorical columns Geography and Gender into dummy (one-hot) variables with drop_first = True. This leaves 11 input features.
+#  d) Split 70% train / 30% test.
+#  e) Normalise with StandardScaler (fit on the training data, transform the test data).
+#  f) Build and train the network, predict on the test set, threshold at 0.5.
+#  g) Evaluate with accuracy, confusion matrix and classification report.
+#
+# 2. KEY CONCEPTS
+# - Artificial Neural Network (ANN) / Multilayer Perceptron (MLP): layers of neurons. Each neuron computes a weighted sum of its inputs plus a bias and passes it through an activation function.
+# - Layers: input layer (11 features), hidden layers (learn patterns), output layer (1 neuron giving the churn probability).
+# - ReLU activation: f(x) = max(0, x). Used in hidden layers because it is simple and avoids the vanishing gradient problem.
+# - Sigmoid activation: f(x) = 1 / (1 + e^-x). Squashes the output into 0..1 so it can be read as a probability. Used in the output layer for binary classification.
+# - Loss function: binary cross-entropy = -[ y*log(p) + (1-y)*log(1-p) ]. It measures how wrong the predicted probability is.
+# - Optimiser Adam: gradient descent with adaptive learning rates (combines momentum and RMSProp).
+# - Backpropagation: the chain rule is used to compute the gradient of the loss with respect to every weight, then the weights are updated.
+# - Epoch: one full pass over the training data. Batch size: number of samples per weight update.
+# - One-hot encoding: turns a category into 0/1 columns. drop_first removes one redundant column (avoids the dummy variable trap).
+# - Why scale features: neural networks train faster and more stably when inputs are on similar scales.
+# - Confusion matrix and metrics: precision, recall, F1, accuracy (see Assignment 2).
+#
+# 3. ALGORITHM (training a neural network)
+#  1. Initialise all weights (small random values) and biases.
+#  2. Forward propagation: for each layer compute a = activation(W * input + b), until the output probability p.
+#  3. Compute the loss (binary cross-entropy) between p and the true label.
+#  4. Backpropagation: compute the gradient of the loss for every weight, layer by layer from output to input.
+#  5. Update the weights with Adam.
+#  6. Repeat steps 2 to 5 for every batch, and for every epoch (or until early stopping).
+#  7. Prediction: forward pass; if p > 0.5 predict "Exited", otherwise "Stayed".
+#
+# 4. TIME AND SPACE COMPLEXITY  (W = total number of weights, n = training samples, E = epochs)
+# - Forward pass: O(W) per sample. Backpropagation: O(W) per sample, the same order as the forward pass.
+# - Training: O(E * n * W) time. Space: O(W) for the parameters plus the activations of one batch.
+# - Prediction: O(W) per sample, so O(m * W) for m test samples.
+# - Preprocessing (scaling, one-hot): O(n * d).
+# - For a fully connected network the weights are W = sum of (neurons in layer i * neurons in layer i+1) + biases.
+#
+# 5. LIKELY VIVA QUESTIONS AND ANSWERS
+# Q1. What is a neural network?
+# A. A model made of layers of connected neurons. Each neuron takes a weighted sum of its inputs, adds a bias and applies an activation function. The weights are learned from data.
+# Q2. Why drop RowNumber, CustomerId and Surname?
+# A. They only identify a customer and carry no predictive information. Keeping them adds noise.
+# Q3. Why one-hot encode Geography and Gender? Why drop_first?
+# A. Neural networks need numbers, and plain codes like 0/1/2 would imply a false order. One-hot columns avoid that; dropping one column avoids redundancy (the dummy variable trap).
+# Q4. Why scale the features?
+# A. Features like Balance (up to 250,000) and Age (about 40) have very different ranges. Without scaling, large features dominate and training is slow or unstable. Fit the scaler on training data only, so no test information leaks.
+# Q5. Why ReLU in the hidden layers and sigmoid in the output?
+# A. ReLU is cheap and trains well. Sigmoid outputs a value between 0 and 1, which is the churn probability for a binary problem.
+# Q6. Why binary cross-entropy?
+# A. The task has two classes and the output is a probability. Cross-entropy punishes confident wrong predictions heavily and gives good gradients with a sigmoid output.
+# Q7. What is Adam?
+# A. An optimiser that adapts the learning rate for each weight using running averages of the gradient and the squared gradient. It usually converges faster than plain gradient descent.
+# Q8. What are epochs and batch size?
+# A. An epoch is one pass over all training data. The batch size is how many samples are used before each weight update.
+# Q9. What is backpropagation?
+# A. It uses the chain rule to compute how much each weight contributed to the error, from the output layer back to the input layer, so the weights can be updated.
+# Q10. How many parameters are there in the original Keras model (11 -> 6 -> 6 -> 1)?
+# A. Layer 1: 11*6 + 6 = 72. Layer 2: 6*6 + 6 = 42. Output: 6*1 + 1 = 7. Total 121 (this matches model.summary()).
+# Q11. Why is accuracy misleading here?
+# A. About 80% of customers stay, so predicting "stay" for everybody already gives about 80% accuracy. Look at recall and precision for the Exited class too.
+# Q12. What is class imbalance and how do you handle it?
+# A. One class has far fewer samples. Remedies: oversampling the minority class, undersampling the majority class, SMOTE, class weights, or choosing a different decision threshold.
+# Q13. What is overfitting and how do you reduce it?
+# A. The network memorises the training data and does poorly on new data. Use fewer neurons, L2 regularisation, dropout, early stopping, and more data.
+# Q14. Why threshold at 0.5? Can it change?
+# A. 0.5 is the default for balanced classes. For churn you can lower it (for example 0.3) to catch more churners (higher recall) at the cost of more false alarms.
+# Q15. Why did the number of hidden neurons (6) get chosen?
+# A. It is a small starting design; there is no fixed rule. Tune the number of layers and neurons with validation accuracy or cross-validation.
+# Q16. What is the difference between Keras, TensorFlow and scikit-learn's MLPClassifier?
+# A. TensorFlow is the low-level deep learning library. Keras is a high-level API on top of it. MLPClassifier is a simpler, CPU-only MLP inside scikit-learn, convenient for small tabular data.
+# Q17. What does the classification report show?
+# A. Precision, recall, F1-score and support (number of samples) for each class, plus accuracy and the macro and weighted averages.
+#
+#
+# 6. THIS VERSION: scikit-learn MLPClassifier (FIXED notebook)
+# - Why changed: it avoids the TensorFlow/Keras installation problem and still builds a multilayer perceptron.
+# - Improvements over the Keras notebook: stratified split (train_test_split with stratify = y keeps the same churn ratio in train and test), a fixed random_state, a scaler fitted on the training data only, and an improved model.
+# - Baseline model: hidden layers (6, 6), relu, adam, early stopping. Parameters: 11*6+6 + 6*6+6 + 6*1+1 = 121. Result: accuracy 85.63%.
+# - Improved model: hidden layers (64, 32, 16), relu, adam, alpha = 0.001 (L2 regularisation), early_stopping = True, trained on a balanced training set.
+#   Parameters: (11*64+64) + (64*32+32) + (32*16+16) + (16*1+1) = 768 + 2080 + 528 + 17 = 3393.
+#   Training stopped at iteration 140 because the validation score stopped improving.
+# - Oversampling: the minority class (Exited) in the TRAINING data was resampled with replacement until both classes had 5574 rows. The test set was NOT oversampled, so the evaluation is honest.
+# - Your result: improved accuracy 78.87%, confusion matrix [[1985, 404], [230, 381]].
+#   Exited class: precision 0.49, recall 0.62, F1 0.55. Stayed class: precision 0.90, recall 0.83.
+# - Why accuracy went DOWN (85.63% -> 78.87%) but the model is still useful: balancing makes the network pay attention to churners, so recall for the Exited class rose (0.62 here, compared with 0.46 in the Keras notebook), while more loyal customers are wrongly flagged. For churn, finding likely leavers is usually worth more than overall accuracy.
+# - Complexity of the improved model: training O(E * n * W) with n = 11,148 balanced samples and W = 3393; each iteration is about 11,148 * 3393 operations. Space O(3393) parameters.
+# - Extra viva points for this version:
+#   Q. What is early stopping? A. A fraction of the training data (validation_fraction = 0.15) is held out; training stops when the validation score does not improve for n_iter_no_change epochs. It prevents overfitting.
+#   Q. What is alpha? A. The strength of the L2 penalty on the weights; a larger alpha gives smaller weights and a simpler model.
+#   Q. Why oversample only the training data? A. If you resample before splitting, duplicated rows leak into the test set and the score becomes falsely high.
+#   Q. What is stratified splitting? A. A split that keeps the class proportions the same in the training and test sets.
+#   Q. Why use predict_proba? A. It returns the churn probability so you can choose your own threshold instead of the default 0.5.
+#   Q. The notebook says "sigmoid-like" for the output. A. For a two-class problem MLPClassifier uses a logistic (sigmoid) output unit.

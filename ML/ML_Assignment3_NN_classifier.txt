@@ -1,0 +1,182 @@
+# ===== CELL 1 =====
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt #Importing the libraries
+
+
+# ===== CELL 2 =====
+df = pd.read_csv("Churn_Modelling.csv")
+
+# # Preprocessing.
+
+# ===== CELL 3 =====
+df.head()
+
+# ===== CELL 4 =====
+df.shape
+
+# ===== CELL 5 =====
+df.describe()
+
+# ===== CELL 6 =====
+df.isnull()
+
+# ===== CELL 7 =====
+df.isnull().sum()
+
+# ===== CELL 8 =====
+df.info()
+
+# ===== CELL 9 =====
+df.dtypes
+
+# ===== CELL 10 =====
+df.columns
+
+# ===== CELL 11 =====
+df = df.drop(['RowNumber', 'Surname', 'CustomerId'], axis= 1) #Dropping the unnecessary columns
+
+# ===== CELL 12 =====
+df.head()
+
+# # Visualization
+
+# ===== CELL 13 =====
+def visualization(x, y, xlabel):
+    plt.figure(figsize=(10,5))
+    plt.hist([x, y], color=['red', 'green'], label = ['exit', 'not_exit'])
+    plt.xlabel(xlabel,fontsize=20)
+    plt.ylabel("No. of customers", fontsize=20)
+    plt.legend()
+
+# ===== CELL 14 =====
+df_churn_exited = df[df['Exited']==1]['Tenure']
+df_churn_not_exited = df[df['Exited']==0]['Tenure']
+
+# ===== CELL 15 =====
+visualization(df_churn_exited, df_churn_not_exited, "Tenure")
+
+# ===== CELL 16 =====
+df_churn_exited2 = df[df['Exited']==1]['Age']
+df_churn_not_exited2 = df[df['Exited']==0]['Age']
+
+# ===== CELL 17 =====
+visualization(df_churn_exited2, df_churn_not_exited2, "Age")
+
+# # Converting the Categorical Variables
+
+# ===== CELL 18 =====
+X = df[['CreditScore','Gender','Age','Tenure','Balance','NumOfProducts','HasCrCard','IsActiveMember','EstimatedSalary']]
+states = pd.get_dummies(df['Geography'],drop_first = True)
+gender = pd.get_dummies(df['Gender'],drop_first = True)
+
+# ===== CELL 19 =====
+
+df = pd.concat([df,gender,states], axis = 1)
+
+# # Splitting the training and testing Dataset
+
+# ===== CELL 20 =====
+df.head()
+
+# ===== CELL 21 =====
+X = df[['CreditScore','Age','Tenure','Balance','NumOfProducts','HasCrCard','IsActiveMember','EstimatedSalary','Male','Germany','Spain']]
+
+# ===== CELL 22 =====
+y = df['Exited']
+
+# ===== CELL 23 =====
+from sklearn.model_selection import train_test_split
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size = 0.30)
+
+# # Normalizing the values with mean as 0 and Standard Deviation as 1
+
+# ===== CELL 24 =====
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+
+# ===== CELL 25 =====
+X_train  = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# ===== CELL 26 =====
+X_train
+
+# ===== CELL 27 =====
+X_test
+
+# # Building the Classifier Model using Keras
+
+# ===== CELL 28 =====
+%pip install --upgrade tensorflow
+import keras #Keras is the wrapper on the top of tenserflow
+#Can use Tenserflow as well but won't be able to understand the errors initially.
+from tensorflow.keras.models import Sequential #To create sequential neural network
+from tensorflow.keras.layers import Dense #To create hidden layers
+
+# ===== CELL 29 =====
+#import tensorflow as tf
+#from tensorflow.keras import Sequential
+#from tensorflow.keras.layers import Dense
+
+#%pip install --upgrade tensorflow
+#classifier = Sequential()
+
+# ===== CELL 30 =====
+#To add the layers
+#Dense helps to contruct the neurons
+#Input Dimension means we have 11 features
+# Units is to create the hidden layers
+#Uniform helps to distribute the weight uniformly
+classifier = Sequential()
+
+classifier.add(Dense(
+    activation="relu",
+    input_dim=11,
+    units=6,
+    kernel_initializer="uniform"
+))
+
+# ===== CELL 31 =====
+classifier.add(Dense(activation = "relu",units = 6,kernel_initializer = "uniform"))   #Adding second hidden layers
+
+# ===== CELL 32 =====
+classifier.add(Dense(activation = "sigmoid",units = 1,kernel_initializer = "uniform")) #Final neuron will be having siigmoid function
+
+# ===== CELL 33 =====
+classifier.compile(optimizer="adam",loss = 'binary_crossentropy',metrics = ['accuracy']) #To compile the Artificial Neural Network. Ussed Binary crossentropy as we just have only two output
+
+# ===== CELL 34 =====
+classifier.summary() #3 layers created. 6 neurons in 1st,6neurons in 2nd layer and 1 neuron in last
+
+# ===== CELL 35 =====
+classifier.fit(X_train,y_train,batch_size=10,epochs=50) #Fitting the ANN to training dataset
+
+# ===== CELL 36 =====
+y_pred =classifier.predict(X_test)
+y_pred = (y_pred > 0.5) #Predicting the result
+
+# ===== CELL 37 =====
+from sklearn.metrics import confusion_matrix,accuracy_score,classification_report
+
+# ===== CELL 38 =====
+cm = confusion_matrix(y_test,y_pred)
+
+# ===== CELL 39 =====
+cm
+
+# ===== CELL 40 =====
+accuracy = accuracy_score(y_test,y_pred)
+
+# ===== CELL 41 =====
+accuracy
+
+# ===== CELL 42 =====
+plt.figure(figsize = (10,7))
+sns.heatmap(cm,annot = True)
+plt.xlabel('Predicted')
+plt.ylabel('Truth')
+
+# ===== CELL 43 =====
+print(classification_report(y_test,y_pred))

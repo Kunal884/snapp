@@ -1,0 +1,194 @@
+/*
+ * Assignment 5: Quick Sort Analysis (Deterministic and Randomized)
+ *
+ * HOW TO RUN ON UBUNTU:
+ *   sudo apt update && sudo apt install default-jdk -y     (only once)
+ *   javac QuickSortAnalysis.java
+ *   java QuickSortAnalysis
+ *
+ * (The file name must stay QuickSortAnalysis.java)
+ *
+ * Deterministic: best/average O(n log n), worst O(n^2) on sorted/reverse sorted input
+ * Randomized:    O(n log n) expected for every input
+ * Space (stack): O(log n) average, O(n) worst
+ */
+
+import java.util.*;
+
+public class QuickSortAnalysis {
+    static long deterministicComparisons = 0;
+    static long randomizedComparisons = 0;
+    static Random rand = new Random();
+
+    // ---------------- DETERMINISTIC QUICK SORT ----------------
+    static void deterministicQuickSort(int[] arr, int low, int high) {
+        if (low < high) {
+            int p = deterministicPartition(arr, low, high);
+            deterministicQuickSort(arr, low, p - 1);
+            deterministicQuickSort(arr, p + 1, high);
+        }
+    }
+
+    // Last element is always chosen as pivot
+    static int deterministicPartition(int[] arr, int low, int high) {
+        int pivot = arr[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            deterministicComparisons++;
+            if (arr[j] <= pivot) {
+                i++;
+                swap(arr, i, j);
+            }
+        }
+        swap(arr, i + 1, high);
+        return i + 1;
+    }
+
+    // ---------------- RANDOMIZED QUICK SORT ----------------
+    static void randomizedQuickSort(int[] arr, int low, int high) {
+        if (low < high) {
+            int p = randomizedPartition(arr, low, high);
+            randomizedQuickSort(arr, low, p - 1);
+            randomizedQuickSort(arr, p + 1, high);
+        }
+    }
+
+    static int randomizedPartition(int[] arr, int low, int high) {
+        // Select a random pivot
+        int randomIndex = low + rand.nextInt(high - low + 1);
+        swap(arr, randomIndex, high);
+
+        int pivot = arr[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            randomizedComparisons++;
+            if (arr[j] <= pivot) {
+                i++;
+                swap(arr, i, j);
+            }
+        }
+        swap(arr, i + 1, high);
+        return i + 1;
+    }
+
+    // ---------------- SWAP FUNCTION ----------------
+    static void swap(int[] arr, int i, int j) {
+        int temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    // ---------------- DISPLAY ARRAY ----------------
+    static void display(int[] arr) {
+        for (int x : arr) {
+            System.out.print(x + " ");
+        }
+        System.out.println();
+    }
+
+    // ---------------- MAIN ----------------
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter number of elements: ");
+        int n = sc.nextInt();
+
+        int[] arr = new int[n];
+        System.out.println("Enter elements:");
+        for (int i = 0; i < n; i++) {
+            arr[i] = sc.nextInt();
+        }
+
+        // Create two copies
+        int[] deterministicArray = arr.clone();
+        int[] randomizedArray = arr.clone();
+
+        // Deterministic Quick Sort
+        long start1 = System.nanoTime();
+        deterministicQuickSort(deterministicArray, 0, n - 1);
+        long end1 = System.nanoTime();
+
+        // Randomized Quick Sort
+        long start2 = System.nanoTime();
+        randomizedQuickSort(randomizedArray, 0, n - 1);
+        long end2 = System.nanoTime();
+
+        // Display results
+        System.out.println("\nOriginal Array:");
+        display(arr);
+
+        System.out.println("\nDeterministic Quick Sort:");
+        display(deterministicArray);
+        System.out.println("Comparisons = " + deterministicComparisons);
+        System.out.println("Execution Time = " + (end1 - start1) + " ns");
+
+        System.out.println("\nRandomized Quick Sort:");
+        display(randomizedArray);
+        System.out.println("Comparisons = " + randomizedComparisons);
+        System.out.println("Execution Time = " + (end2 - start2) + " ns");
+
+        sc.close();
+    }
+}
+
+/*
+ * ===================== SAMPLE INPUTS AND OUTPUTS =====================
+ * (Execution times change on every run; randomized comparison counts can
+ *  also differ on every run. Deterministic comparison counts stay the same
+ *  for the same input.)
+ *
+ * Run 1 (mixed input, n = 8)
+ *   Enter number of elements: 8
+ *   Enter elements:
+ *   38 27 43 3 9 82 10 3
+ *
+ *   Original Array:
+ *   38 27 43 3 9 82 10 3
+ *
+ *   Deterministic Quick Sort:
+ *   3 3 9 10 27 38 43 82
+ *   Comparisons = 15
+ *   Execution Time = 6592 ns
+ *
+ *   Randomized Quick Sort:
+ *   3 3 9 10 27 38 43 82
+ *   Comparisons = 16
+ *   Execution Time = 11395 ns
+ *
+ * Run 2 (already sorted input, n = 10)
+ *   Enter number of elements: 10
+ *   Enter elements:
+ *   1 2 3 4 5 6 7 8 9 10
+ *
+ *   Original Array:
+ *   1 2 3 4 5 6 7 8 9 10
+ *
+ *   Deterministic Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 45
+ *   Execution Time = 7289 ns
+ *
+ *   Randomized Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 29
+ *   Execution Time = 9828 ns
+ *
+ * Run 3 (reverse sorted input, n = 10)
+ *   Enter number of elements: 10
+ *   Enter elements:
+ *   10 9 8 7 6 5 4 3 2 1
+ *
+ *   Original Array:
+ *   10 9 8 7 6 5 4 3 2 1
+ *
+ *   Deterministic Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 45
+ *   Execution Time = 7519 ns
+ *
+ *   Randomized Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 23
+ *   Execution Time = 11751 ns
+ */

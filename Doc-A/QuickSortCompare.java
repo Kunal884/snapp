@@ -1,0 +1,352 @@
+/*
+ * Assignment 5: Quick Sort Analysis (Deterministic and Randomized)
+ *
+ * HOW TO RUN ON UBUNTU:
+ *   sudo apt update && sudo apt install default-jdk -y     (only once)
+ *   javac QuickSortCompare.java
+ *   java QuickSortCompare
+ *
+ * (The file name must stay QuickSortCompare.java)
+ *
+ * Deterministic: best/average O(n log n), worst O(n^2) on sorted/reverse sorted input
+ * Randomized:    O(n log n) expected for every input
+ * Space (stack): O(log n) average, O(n) worst
+ */
+
+import java.util.*;
+
+public class QuickSortCompare {
+    static long deterministicComparisons = 0;
+    static long randomizedComparisons = 0;
+    static Random rand = new Random();
+
+    // ---------------- DETERMINISTIC QUICK SORT ----------------
+    static void deterministicQuickSort(int[] arr, int low, int high) {
+        if (low < high) {
+            int p = deterministicPartition(arr, low, high);
+            deterministicQuickSort(arr, low, p - 1);
+            deterministicQuickSort(arr, p + 1, high);
+        }
+    }
+
+    // Last element is always chosen as pivot
+    static int deterministicPartition(int[] arr, int low, int high) {
+        int pivot = arr[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            deterministicComparisons++;
+            if (arr[j] <= pivot) {
+                i++;
+                swap(arr, i, j);
+            }
+        }
+        swap(arr, i + 1, high);
+        return i + 1;
+    }
+
+    // ---------------- RANDOMIZED QUICK SORT ----------------
+    static void randomizedQuickSort(int[] arr, int low, int high) {
+        if (low < high) {
+            int p = randomizedPartition(arr, low, high);
+            randomizedQuickSort(arr, low, p - 1);
+            randomizedQuickSort(arr, p + 1, high);
+        }
+    }
+
+    static int randomizedPartition(int[] arr, int low, int high) {
+        // Select a random pivot
+        int randomIndex = low + rand.nextInt(high - low + 1);
+        swap(arr, randomIndex, high);
+
+        int pivot = arr[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            randomizedComparisons++;
+            if (arr[j] <= pivot) {
+                i++;
+                swap(arr, i, j);
+            }
+        }
+        swap(arr, i + 1, high);
+        return i + 1;
+    }
+
+    // ---------------- SWAP FUNCTION ----------------
+    static void swap(int[] arr, int i, int j) {
+        int temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    // ---------------- DISPLAY ARRAY ----------------
+    static void display(int[] arr) {
+        for (int x : arr) {
+            System.out.print(x + " ");
+        }
+        System.out.println();
+    }
+
+    // ---------------- MAIN ----------------
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter number of elements: ");
+        int n = sc.nextInt();
+
+        int[] arr = new int[n];
+        System.out.println("Enter elements:");
+        for (int i = 0; i < n; i++) {
+            arr[i] = sc.nextInt();
+        }
+
+        // Create two copies
+        int[] deterministicArray = arr.clone();
+        int[] randomizedArray = arr.clone();
+
+        // Deterministic Quick Sort
+        long start1 = System.nanoTime();
+        deterministicQuickSort(deterministicArray, 0, n - 1);
+        long end1 = System.nanoTime();
+
+        // Randomized Quick Sort
+        long start2 = System.nanoTime();
+        randomizedQuickSort(randomizedArray, 0, n - 1);
+        long end2 = System.nanoTime();
+
+        // Display results
+        System.out.println("\nOriginal Array:");
+        display(arr);
+
+        System.out.println("\nDeterministic Quick Sort:");
+        display(deterministicArray);
+        System.out.println("Comparisons = " + deterministicComparisons);
+        System.out.println("Execution Time = " + (end1 - start1) + " ns");
+
+        System.out.println("\nRandomized Quick Sort:");
+        display(randomizedArray);
+        System.out.println("Comparisons = " + randomizedComparisons);
+        System.out.println("Execution Time = " + (end2 - start2) + " ns");
+
+        sc.close();
+    }
+}
+
+/*
+ * ===================== SAMPLE INPUTS AND OUTPUTS =====================
+ * (Execution times change on every run; randomized comparison counts can
+ *  also differ on every run. Deterministic comparison counts stay the same
+ *  for the same input.)
+ *
+ * Run 1 (mixed input, n = 8)
+ *   Enter number of elements: 8
+ *   Enter elements:
+ *   38 27 43 3 9 82 10 3
+ *
+ *   Original Array:
+ *   38 27 43 3 9 82 10 3
+ *
+ *   Deterministic Quick Sort:
+ *   3 3 9 10 27 38 43 82
+ *   Comparisons = 15
+ *   Execution Time = 6592 ns
+ *
+ *   Randomized Quick Sort:
+ *   3 3 9 10 27 38 43 82
+ *   Comparisons = 16
+ *   Execution Time = 11395 ns
+ *
+ * Run 2 (already sorted input, n = 10)
+ *   Enter number of elements: 10
+ *   Enter elements:
+ *   1 2 3 4 5 6 7 8 9 10
+ *
+ *   Original Array:
+ *   1 2 3 4 5 6 7 8 9 10
+ *
+ *   Deterministic Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 45
+ *   Execution Time = 7289 ns
+ *
+ *   Randomized Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 29
+ *   Execution Time = 9828 ns
+ *
+ * Run 3 (reverse sorted input, n = 10)
+ *   Enter number of elements: 10
+ *   Enter elements:
+ *   10 9 8 7 6 5 4 3 2 1
+ *
+ *   Original Array:
+ *   10 9 8 7 6 5 4 3 2 1
+ *
+ *   Deterministic Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 45
+ *   Execution Time = 7519 ns
+ *
+ *   Randomized Quick Sort:
+ *   1 2 3 4 5 6 7 8 9 10
+ *   Comparisons = 23
+ *   Execution Time = 11751 ns
+ */
+
+/*
+ * ======================================================================
+ *                  THEORY (for viva / written part)
+ * ======================================================================
+ *
+ * Assignment 5: Quick Sort Analysis
+ * Deterministic and Randomized Quick Sort, with Time and Space Complexity
+ *
+ * Problem Statement
+ * Write a program for the analysis of Quick Sort using a deterministic and a randomized variant. Sort the
+ * same input with both variants and compare the number of comparisons and the execution time.
+ *
+ * Algorithm
+ * Input: n and n integers Output: the sorted array, the number of comparisons and the execution time
+ * of each variant
+ * 1. Start.
+ * 2. Read n and the n elements into an array arr.
+ * 3. Make two copies of arr: one for each variant.
+ * 4. Set both comparison counters to 0. Run deterministic Quick Sort on the first copy and note the time.
+ * Run randomized Quick Sort on the second copy and note the time.
+ * 5. Print the original array, each sorted array, the comparisons and the execution time of each variant.
+ * 6. Stop.
+ *
+ * Function deterministicPartition(arr, low, high)
+ * 1. pivot = arr[high] (the last element), i = low - 1.
+ * 2. For j = low to high-1: increase deterministicComparisons by 1. If arr[j] <= pivot, then i = i + 1 and
+ * swap arr[i], arr[j].
+ * 3. Swap arr[i+1] and arr[high] (the pivot goes to its final place). Return i + 1.
+ *
+ * Function deterministicQuickSort(arr, low, high)
+ * 1. If low < high: p = deterministicPartition(arr, low, high).
+ * 2. deterministicQuickSort(arr, low, p-1) and deterministicQuickSort(arr, p+1, high).
+ *
+ * Function randomizedPartition(arr, low, high)
+ * 1. Choose a random index r between low and high and swap arr[r] with arr[high].
+ * 2. Partition exactly as above (pivot = arr[high]), counting the comparisons in randomizedComparisons.
+ * Return the pivot position.
+ *
+ * Function randomizedQuickSort(arr, low, high)
+ * 1. If low < high: p = randomizedPartition(arr, low, high).
+ * 2. randomizedQuickSort(arr, low, p-1) and randomizedQuickSort(arr, p+1, high).
+ *
+ * The only difference between the two variants is how the pivot is chosen: always the last element
+ * (deterministic) or a random element moved to the end (randomized).
+ *
+ * Complexity (n = number of elements)
+ * Variant                              Best case      Average case                      Worst case                                  Space (stack)
+ * Deterministic (last element pivot)   O(n log n)     O(n log n)                        O(n^2) for sorted or reverse sorted input   O(log n) average, O(n) worst
+ * Randomized                           O(n log n)     O(n log n) expected, for every    O(n^2) but extremely unlikely               O(log n) expected, O(n) worst
+ *                                                     input
+ * partition                            O(n)           O(n)                              O(n)                                        O(1)
+ *
+ * Analysis
+ * partition makes exactly high - low comparisons, so it takes O(n) time on n elements. If it splits the array
+ * into parts of sizes k and n-k-1, then T(n) = T(k) + T(n-k-1) + O(n).
+ *
+ * Case             Split                         Recurrence            Comparisons
+ * Best / average   roughly balanced              T(n) = 2T(n/2) + n    about n log2 n (about 1.39 n log2 n for random pivots)
+ * Worst            one part is empty (0 and n-1) T(n) = T(n-1) + n     (n-1) + (n-2) + ... + 1 = n(n-1)/2
+ *
+ * Deterministic variant
+ * With the last element as pivot, an already sorted or reverse sorted array always gives the split 0 and
+ * n-1, so the worst case happens on very ordinary input. For n = 10 this is 9 + 8 + ... + 1 = 45
+ * comparisons, as the sample runs show.
+ *
+ * Randomized variant
+ * The pivot is random, so no input is always bad. The running time depends on the random choices, not
+ * on the order of the input. The expected number of comparisons is about 1.39 n log2 n for every input.
+ * The worst case still exists, but its probability is extremely small.
+ *
+ *
+ * Observations
+ * Input           Deterministic                   Randomized
+ * Mixed / random  close to n log2 n               close to n log2 n
+ * Already sorted  exactly n(n-1)/2 (worst case)   close to n log2 n
+ * Reverse sorted  exactly n(n-1)/2 (worst case)   close to n log2 n
+ *
+ * Viva Questions and Answers
+ * Q1. What is Quick Sort?
+ * A divide and conquer sorting algorithm. It picks a pivot, partitions the array so that smaller elements
+ * are on the left and larger ones on the right, and then sorts the two parts recursively.
+ *
+ * Q2. What is a pivot and what does partition do?
+ * The pivot is the element used to split the array. partition puts the pivot in its final sorted position and
+ * returns that position.
+ *
+ * Q3. What is the difference between the deterministic and the randomized variant?
+ * Deterministic always takes the same element (here the last one) as pivot. Randomized picks the
+ * pivot at random.
+ *
+ * Q4. What is the worst case of the deterministic variant?
+ * An already sorted or reverse sorted array. The pivot is always the smallest or largest element, so
+ * one part is empty and the time is O(n^2) with n(n-1)/2 comparisons.
+ *
+ * Q5. What is the best case?
+ * The pivot always splits the array into two equal halves. The time is O(n log n).
+ *
+ * Q6. What is the average case?
+ * O(n log n). Even a split such as 1:9 at every step still gives O(n log n).
+ *
+ * Q7. How does randomization help?
+ * The pivot no longer depends on the order of the input, so no particular input is always bad. The
+ * expected time is O(n log n) for every input.
+ *
+ * Q8. Does randomization remove the worst case completely?
+ * No. The worst case can still happen, but its probability is extremely small.
+ *
+ * Q9. What is the expected number of comparisons of randomized Quick Sort?
+ * About 2 n ln n, which is about 1.39 n log2 n for large n.
+ *
+ * Q10. Why do you count comparisons as well as measuring time?
+ * The count does not depend on the computer or on other programs running, so it is repeatable and
+ * can be compared with the theory. Times for small arrays are very small and change from run to run.
+ *
+ * Q11. Why does the program make two copies of the array?
+ * Quick Sort sorts in place. Each variant needs the same unsorted input, so each one sorts its own
+ * copy and the original stays unchanged.
+ *
+ * Q12. Why is Random declared as a static field?
+ * One Random object is enough for the whole run. Creating a new one on every call of
+ * randomizedPartition wastes time and makes the randomized variant look slower.
+ *
+ * Q13. What is the recurrence of the worst case and its solution?
+ * T(n) = T(n-1) + n, which gives n(n-1)/2, so O(n^2).
+ *
+ * Q14. What is the space complexity?
+ * No extra array is needed (in-place), but the recursion uses stack space: O(log n) on average and
+ * O(n) in the worst case.
+ *
+ * Q15. What happens for a very large sorted input?
+ * The deterministic variant recurses n levels deep, so a very large n (tens of thousands) gives a
+ * StackOverflowError.
+ *
+ * Q16. How can the stack depth be reduced?
+ * Recurse on the smaller part first and loop on the larger part. The depth then stays O(log n) even in
+ * the worst case.
+ *
+ * Q17. Is Quick Sort stable?
+ * No. The swaps in partition can change the relative order of equal elements.
+ *
+ * Q18. How does Quick Sort compare with Merge Sort?
+ * Merge Sort is always O(n log n) but needs O(n) extra space. Quick Sort works in place and is
+ * usually faster in practice, but its worst case is O(n^2).
+ *
+ * Q19. What happens if all elements are equal?
+ * With this partition every element goes to the left part, so the split is 0 and n-1 and the time is O(n^2).
+ * A three-way partition avoids this.
+ *
+ * Q20. How else can a better pivot be chosen?
+ * Median of three (first, middle, last element) or the median of medians.
+ *
+ * Conclusion
+ * Both variants sort the input correctly. The deterministic variant needs n(n-1)/2 comparisons, O(n^2), on
+ * sorted and reverse sorted input, while the randomized variant stays close to n log2 n on every input.
+ * Randomizing the pivot removes the dependence on input order, and Quick Sort runs in O(n log n)
+ * expected time with O(log n) expected extra space.
+ */

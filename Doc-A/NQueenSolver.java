@@ -1,0 +1,322 @@
+/*
+ * Assignment 4: N-Queens Problem (Backtracking, first queen placed at (0,0))
+ *
+ * HOW TO RUN ON UBUNTU:
+ *   sudo apt update && sudo apt install default-jdk -y     (only once)
+ *   javac NQueenSolver.java
+ *   java NQueenSolver
+ *
+ * (The file name must stay NQueenSolver.java)
+ *
+ * Time: O(n!) worst case   Space: O(n^2)
+ */
+
+import java.util.Scanner;
+
+public class NQueenSolver {
+    static int[][] board;
+    static int n;
+
+    // Check whether a queen can be placed
+    static boolean isSafe(int row, int col) {
+        // Check column
+        for (int i = 0; i < row; i++) {
+            if (board[i][col] == 1)
+                return false;
+        }
+
+        // Check upper-left diagonal
+        for (int i = row - 1, j = col - 1; i >= 0 && j >= 0; i--, j--) {
+            if (board[i][j] == 1)
+                return false;
+        }
+
+        // Check upper-right diagonal
+        for (int i = row - 1, j = col + 1; i >= 0 && j < n; i--, j++) {
+            if (board[i][j] == 1)
+                return false;
+        }
+
+        return true;
+    }
+
+    // Backtracking function
+    static boolean solveNQueens(int row) {
+        // All queens are placed
+        if (row == n)
+            return true;
+
+        // Try each column
+        for (int col = 0; col < n; col++) {
+            if (isSafe(row, col)) {
+                board[row][col] = 1;
+
+                if (solveNQueens(row + 1))
+                    return true;
+
+                // Backtrack
+                board[row][col] = 0;
+            }
+        }
+        return false;
+    }
+
+    // Display the chessboard
+    static void displayBoard() {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                System.out.print(board[i][j] + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter value of N: ");
+        n = sc.nextInt();
+
+        // Fix: reject invalid N (board[0][0] would crash for N <= 0)
+        if (n < 1) {
+            System.out.println("N must be at least 1.");
+            return;
+        }
+
+        board = new int[n][n];
+
+        // Place the first Queen at row 0, column 0
+        board[0][0] = 1;
+
+        System.out.println("\nInitial Matrix:");
+        displayBoard();
+
+        // Start placing remaining queens from row 1
+        if (solveNQueens(1)) {
+            System.out.println("\nFinal N-Queens Matrix:");
+            displayBoard();
+        } else {
+            System.out.println("\nNo solution exists with the first Queen at (1,1).");
+        }
+        sc.close();
+    }
+}
+
+/*
+ * ===================== SAMPLE INPUTS AND OUTPUTS =====================
+ *
+ * Run 1 (n = 5)
+ *   Enter value of N: 5
+ *
+ *   Initial Matrix:
+ *   1 0 0 0 0
+ *   0 0 0 0 0
+ *   0 0 0 0 0
+ *   0 0 0 0 0
+ *   0 0 0 0 0
+ *
+ *   Final N-Queens Matrix:
+ *   1 0 0 0 0
+ *   0 0 1 0 0
+ *   0 0 0 0 1
+ *   0 1 0 0 0
+ *   0 0 0 1 0
+ *
+ * Run 2 (n = 8)   [the program prints the initial matrix too; not shown here]
+ *   Enter value of N: 8
+ *
+ *   Final N-Queens Matrix:
+ *   1 0 0 0 0 0 0 0
+ *   0 0 0 0 1 0 0 0
+ *   0 0 0 0 0 0 0 1
+ *   0 0 0 0 0 1 0 0
+ *   0 0 1 0 0 0 0 0
+ *   0 0 0 0 0 0 1 0
+ *   0 1 0 0 0 0 0 0
+ *   0 0 0 1 0 0 0 0
+ *
+ * Run 3 (n = 4, no solution with the first queen at (1,1))
+ *   Enter value of N: 4
+ *
+ *   Initial Matrix:
+ *   1 0 0 0
+ *   0 0 0 0
+ *   0 0 0 0
+ *   0 0 0 0
+ *
+ *   No solution exists with the first Queen at (1,1).
+ *
+ * Run 4 (n = 0, invalid input)
+ *   Enter value of N: 0
+ *   N must be at least 1.
+ */
+
+/*
+ * ======================================================================
+ *                  THEORY (for viva / written part)
+ * ======================================================================
+ *
+ * Assignment 4: N-Queens Problem
+ * Backtracking with the first queen pre-placed
+ *
+ * Problem Statement
+ * Design an n x n N-Queens matrix having the first queen placed. Use backtracking to place the
+ * remaining queens and generate the final N-Queens matrix.
+ *
+ * Algorithm
+ * Input: n Output: final N-Queens matrix, or a message that no solution exists
+ * 1. Start.
+ * 2. Read n. If n < 1, print an error message and stop.
+ * 3. Create an n x n board filled with 0.
+ * 4. Place the first queen: board[0][0] = 1. Print the initial matrix.
+ * 5. Call solveNQueens(1) to place the remaining queens, starting from row 1.
+ * 6. If it returns true, print the final matrix. Otherwise print that no solution exists.
+ * 7. Stop.
+ *
+ * Function solveNQueens(row)
+ * 1. If row = n, all queens are placed. Return true.
+ * 2. For each column col = 0 to n-1:
+ * (a) If isSafe(row, col): place the queen, board[row][col] = 1.
+ * (b) If solveNQueens(row+1) returns true, return true.
+ * (c) Otherwise backtrack: board[row][col] = 0 and try the next column.
+ * 3. No column worked. Return false.
+ *
+ * Function isSafe(row, col)
+ * Return false if a queen already exists in the same column above, or on the upper-left diagonal, or on
+ * the upper-right diagonal. Otherwise return true. Only the rows above are checked, because queens
+ * are placed row by row.
+ *
+ * Complexity Analysis (n = board size)
+ * Part                      Time    Space   Reason
+ * isSafe                    O(n)    O(1)    scans one column and two diagonals, each at most n cells
+ * displayBoard              O(n^2)  O(1)    prints every cell once
+ * Creating the board        O(n^2)  O(n^2)  n x n array of integers
+ * solveNQueens (search)     O(n!)   O(n)    recursion goes one row deeper per call, so depth is at most n
+ * Whole program             O(n!)   O(n^2)  the search dominates the time; the board dominates the space
+ *
+ * Why O(n!)?
+ * Row 0 is fixed. Row 1 has at most n-1 safe columns to try, row 2 has fewer, and so on, so the search
+ * tree has at most about (n-1)(n-2)...1 = (n-1)! partial placements. Each placement is tested by isSafe in
+ * O(n), so the loose bound is O(n x n!). This is usually written as O(n!) because the factorial dominates.
+ *
+ * Best, Average and Worst Case
+ * Case      When it happens                                                                    Time
+ * Best      Every row finds a safe column at once, no backtracking (n rows x up to n           at most O(n^3)
+ *           columns x O(n) check)
+ * Average   Some backtracking; pruning removes most branches early                             much smaller than n!
+ * Worst     Many dead ends, or no solution exists (the whole search tree is explored)          O(n!)
+ *
+ * Measured Number of solveNQueens Calls
+ * These numbers were measured by temporarily adding a call counter to the program. They show that
+ * pruning keeps the real work small, and that the count depends on where the dead ends occur, not only
+ * on n (n = 8 needs more calls than n = 9).
+ * n                                   4    5    6    7    8     9    10
+ * Solution with first queen at (1,1)? No   Yes  No   Yes  Yes   Yes  Yes
+ * Calls to solveNQueens               4    5    22   9    113   41   102
+ *
+ * Comparison of Approaches
+ *                Brute force                      Backtracking (this program)               Backtracking with boolean arrays
+ * Idea           place all n queens anywhere,     one queen per row, drop unsafe            same, but remember used columns
+ *                then test                        partial boards                            and diagonals
+ * Safety check   O(n^2) per full board            O(n)                                      O(1)
+ * Time           exponential, very large          O(n!) worst, small in practice            O(n!) worst, faster in practice
+ * Space          O(n^2)                           O(n^2)                                    O(n) if only one column per row is stored
+ *
+ *
+ * Viva Questions and Answers
+ * Q1. What is the N-Queens problem?
+ * Place n queens on an n x n chessboard so that no two queens share a row, a column or a diagonal.
+ *
+ * Q2. What is a queen's attack range in chess?
+ * A queen attacks every square in its row, its column and both of its diagonals, any distance away.
+ *
+ * Q3. What is backtracking?
+ * Build the solution step by step. If a step leads to a dead end, undo it (backtrack) and try the next
+ * choice.
+ *
+ * Q4. Where is the backtracking in your code?
+ * In solveNQueens. If solveNQueens(row + 1) returns false, the line board[row][col] = 0 removes the
+ * queen and the loop tries the next column.
+ *
+ * Q5. What is special in this assignment?
+ * The first queen is fixed at (0,0), so the search starts from row 1. Because that queen cannot move,
+ * some values of n have no solution.
+ *
+ * Q6. Why is only one queen placed in each row?
+ * Two queens in one row attack each other, so every row needs exactly one queen. This also
+ * removes the need for a row check.
+ *
+ * Q7. How does isSafe work?
+ * It scans upward from the square: the column above, the upper-left diagonal and the upper-right
+ * diagonal. If any of these holds a queen, the square is unsafe and false is returned.
+ *
+ * Q8. Why does isSafe check only the rows above?
+ * Queens are placed from top to bottom, so the rows below are still empty.
+ *
+ * Q9. How can you tell that two queens are on the same diagonal?
+ * Squares on one diagonal have the same value of (row - col). Squares on the other diagonal have
+ * the same value of (row + col).
+ *
+ * Q10. Why does the program print "No solution" for n = 4 and n = 6?
+ * No valid arrangement for these n has a queen in the corner (0,0), so every attempt ends in a dead
+ * end. (n = 2 and n = 3 have no solution at all.)
+ *
+ * Q11. What is the time complexity?
+ * O(n!) in the worst case. isSafe takes O(n) per test, and pruning makes the search much faster in
+ * practice.
+ *
+ * Q12. What is the space complexity?
+ * O(n^2) for the board plus O(n) for the recursion stack, so O(n^2) overall.
+ *
+ * Q13. What is the maximum recursion depth?
+ * n levels (rows 1 to n-1 plus the final call with row = n).
+ *
+ * Q14. What is the difference between brute force and backtracking?
+ * Brute force builds every complete arrangement and tests it. Backtracking rejects a partial
+ * arrangement as soon as it breaks a rule, so all the boards that would grow from that bad choice are
+ * never explored.
+ *
+ * Q15. How is backtracking related to DFS?
+ * Backtracking is depth-first search on the state space tree (each level is a row, each branch is a
+ * column), with pruning of unsafe branches.
+ *
+ * Q16. Why does solveNQueens return a boolean?
+ * So that a deeper call can tell its caller whether a full solution was found. True means stop, false
+ * means undo and try another column.
+ *
+ * Q17. Does the program find all solutions?
+ * No, it stops at the first one found (searching columns from left to right). To get all, print the board
+ * when row = n and return false to keep backtracking.
+ *
+ * Q18. How can the first queen be placed in another column?
+ * Read the column from the user and use board[0][col] = 1 instead of board[0][0] = 1. The rest stays
+ * the same.
+ *
+ * Q19. What happens for n = 1?
+ * The single queen is the first queen. solveNQueens(1) sees row = n and returns true, so the final
+ * matrix is just 1.
+ *
+ * Q20. Why did you add the check n < 1?
+ * For n = 0 or a negative n, board[0][0] = 1 would throw an exception (the board has no cells). The
+ * check prints an error message instead.
+ *
+ * Q21. How can isSafe be made O(1)?
+ * Keep three boolean arrays: used columns, used diagonals (row + col) and used anti-diagonals (row
+ * - col + n - 1). Check and update them instead of scanning the board. Bit masks do the same even
+ * faster.
+ *
+ * Q22. How many solutions does the 8-queens problem have?
+ * 92 in total (12 distinct if rotations and reflections are counted as the same).
+ *
+ * Q23. Can this be done without recursion?
+ * Yes. Use a loop with an explicit stack (or an array holding the column of each row) and move back a
+ * row when no column works.
+ *
+ * Q24. Where else is backtracking used?
+ * Sudoku solvers, graph colouring, subset-sum, maze solving, Hamiltonian cycle and other constraint
+ * satisfaction problems.
+ *
+ * Conclusion
+ * The first queen is placed at (0,0) and backtracking places the remaining queens row by row. It gives a
+ * valid matrix when a solution exists (for example n = 5 and n = 8) and reports no solution when it does
+ * not (n = 4 and n = 6). The time is O(n!) in the worst case and the space is O(n^2).
+ */

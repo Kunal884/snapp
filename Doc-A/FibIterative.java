@@ -1,0 +1,229 @@
+/*
+ * Assignment 1 (Program 1): Fibonacci Numbers - Non-Recursive (Iterative)
+ *
+ * HOW TO RUN ON UBUNTU:
+ *   sudo apt update && sudo apt install default-jdk -y     (only once)
+ *   javac FibIterative.java
+ *   java FibIterative
+ *
+ * (The file name must stay FibIterative.java)
+ *
+ * Time: O(n)   Space: O(1)
+ */
+
+import java.util.Scanner;
+
+public class FibIterative {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter the value of n: ");
+        int n = sc.nextInt();
+
+        if (n < 0) {
+            System.out.println("Please enter a non-negative number.");
+            return;
+        }
+
+        long a = 0, b = 1, c;
+        long stepCount = 0;
+
+        if (n == 0) {
+            System.out.println("Fibonacci number = 0");
+            stepCount = 1;
+        } else if (n == 1) {
+            System.out.println("Fibonacci number = 1");
+            stepCount = 1;
+        } else {
+            for (int i = 2; i <= n; i++) {
+                c = a + b; stepCount++; // addition
+                a = b;     stepCount++; // assignment
+                b = c;     stepCount++; // assignment
+            }
+            System.out.println("Fibonacci number = " + b);
+        }
+
+        System.out.println("Step Count = " + stepCount);
+        sc.close();
+    }
+}
+
+/*
+ * ===================== SAMPLE INPUTS AND OUTPUTS =====================
+ *
+ * Run 1 (n = 0, base case)
+ *   Enter the value of n: 0
+ *   Fibonacci number = 0
+ *   Step Count = 1
+ *
+ * Run 2 (n = 5)
+ *   Enter the value of n: 5
+ *   Fibonacci number = 5
+ *   Step Count = 12
+ *
+ * Run 3 (n = 10)
+ *   Enter the value of n: 10
+ *   Fibonacci number = 55
+ *   Step Count = 27
+ *
+ * Run 4 (n = 20)
+ *   Enter the value of n: 20
+ *   Fibonacci number = 6765
+ *   Step Count = 57
+ *
+ * Run 5 (n = -3, invalid input)
+ *   Enter the value of n: -3
+ *   Please enter a non-negative number.
+ */
+
+/*
+ * ======================================================================
+ *                  THEORY (for viva / written part)
+ * ======================================================================
+ *
+ * Assignment 1: Fibonacci Numbers
+ * Non-Recursive (Iterative) and Recursive Programs with Time and Space Complexity Analysis
+ *
+ * Problem Statement
+ * Write a non-recursive and a recursive program to calculate Fibonacci numbers and analyze their time
+ * and space complexity. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2).
+ *
+ * Algorithms
+ * Algorithm 1: Non-Recursive (Iterative)
+ * Input: n Output: F(n) and the step count
+ * 1. Start.
+ * 2. Read n.
+ * 3. If n < 0, print an error message and stop.
+ * 4. If n = 0 or n = 1, print n as the Fibonacci number, set stepCount = 1 and go to step 8.
+ * 5. Set a = 0, b = 1 and stepCount = 0.
+ * 6. Repeat for i = 2 to n:
+ * (a) c = a + b (stepCount = stepCount + 1)
+ * (b) a = b (stepCount = stepCount + 1)
+ * (c) b = c (stepCount = stepCount + 1)
+ * 7. Print b as the Fibonacci number.
+ * 8. Print stepCount.
+ * 9. Stop.
+ *
+ * Algorithm 2: Recursive
+ * Main steps
+ * 1. Start.
+ * 2. Read n.
+ * 3. If n < 0, print an error message and stop.
+ * 4. Set stepCount = 0.
+ * 5. Call fibonacci(n) and store the result.
+ * 6. Print the result and stepCount.
+ * 7. Stop.
+ *
+ * Function fibonacci(n)
+ * 1. Increase stepCount by 1 (this counts the current call).
+ * 2. If n = 0, return 0.
+ * 3. If n = 1, return 1.
+ * 4. Return fibonacci(n-1) + fibonacci(n-2).
+ *
+ * Complexity (n = the input number)
+ * Approach    Time     Space   Reason
+ * Iterative   O(n)     O(1)    loop runs n-1 times, only a few variables
+ * Recursive   O(2^n)   O(n)    two calls per call; stack depth n
+ *
+ *
+ * Step Count Summary
+ * n    Fibonacci number   Iterative steps   Recursive steps
+ * 0    0                  1                 1
+ * 1    1                  1                 1
+ * 5    5                  12                15
+ * 10   55                 27                177
+ * 20   6765               57                21891
+ *
+ * Complexity Analysis
+ * Iterative Program
+ * For n >= 2 the loop runs n-1 times and each pass counts 3 steps (one addition and two assignments),
+ * so Step Count = 3(n-1). Only the variables a, b, c and i are used.
+ * Time complexity: O(n)   Space complexity: O(1)
+ *
+ * Recursive Program
+ * Each call to fibonacci(n) makes two further calls, for n-1 and n-2, so the number of calls satisfies T(n)
+ * = T(n-1) + T(n-2) + 1. The same subproblems are recomputed many times (overlapping
+ * subproblems). The total number of calls is 2*F(n+1) - 1, which grows exponentially. The call stack
+ * reaches a depth of at most n+1 frames.
+ * Time complexity: O(2^n) (tight bound is Theta(1.618^n))   Space complexity: O(n) (call stack)
+ *
+ * Comparison
+ *                    Iterative                          Recursive
+ * Time complexity    O(n)                               O(2^n)
+ * Space complexity   O(1)                               O(n)
+ * Steps for n = 20   57                                 21891
+ * Approach           Loop, keeps last two values        Function calls itself
+ *
+ * Viva Questions and Answers
+ * Q1. What is the Fibonacci series?
+ * A series where each number is the sum of the previous two, starting with 0 and 1: 0, 1, 1, 2, 3, 5,
+ * 8, 13, 21, ... It is defined as F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2).
+ *
+ * Q2. What is the difference between the iterative and the recursive approach?
+ * The iterative approach uses a loop and keeps the last two values in variables. The recursive
+ * approach makes the function call itself for n-1 and n-2 until it reaches the base cases.
+ *
+ * Q3. What is the time complexity of the iterative program and why?
+ * O(n). The loop runs n-1 times and each pass does a constant amount of work (3 steps).
+ *
+ * Q4. What is the time complexity of the recursive program and why?
+ * O(2^n) (tightly Theta(1.618^n)). Each call makes two more calls, so the number of calls roughly
+ * doubles as n increases. The recurrence is T(n) = T(n-1) + T(n-2) + 1.
+ *
+ * Q5. What is the space complexity of each program?
+ * Iterative: O(1), because only a few variables are used. Recursive: O(n), because the call stack can
+ * hold up to n+1 frames at a time (the leftmost path fibonacci(n), fibonacci(n-1), ..., fibonacci(1)).
+ *
+ * Q6. Why is the recursive version so slow?
+ * Because of overlapping subproblems. The same values are calculated again and again. For n = 5,
+ * fibonacci(3) is computed 2 times and fibonacci(2) is computed 3 times.
+ *
+ * Q7. What is step count?
+ * A way to measure running time by counting basic operations or function calls instead of seconds.
+ * In the iterative program it counts operations (addition and assignments). In the recursive program
+ * it counts function calls.
+ *
+ * Q8. What are the step count formulas of your programs?
+ * Iterative: 3(n-1) for n >= 2 and 1 for n = 0 or 1. Recursive: 2*F(n+1) - 1 calls. For n = 10 these are
+ * 27 and 177.
+ *
+ * Q9. What are base cases and why are they needed?
+ * Base cases are the inputs the function answers directly: F(0) = 0 and F(1) = 1. Without them the
+ * recursion never stops and the program crashes with a StackOverflowError.
+ *
+ * Q10. What happens if the user enters a negative number?
+ * The base cases are never reached, so the recursion would go on forever. That is why both
+ * programs check for n < 0 and print an error message.
+ *
+ * Q11. Why did you use long instead of int?
+ * int overflows at F(47), which is more than 2,147,483,647. The recursive step counter overflows
+ * even earlier, at n = 44. long can hold Fibonacci numbers up to F(92).
+ *
+ * Q12. What is a stack overflow?
+ * An error that occurs when recursion goes too deep and the call stack runs out of memory, for
+ * example when the base case is missing or n is extremely large.
+ *
+ * Q13. How can the recursive version be made faster?
+ * Use memoization (store each result in an array or map the first time it is computed) or dynamic
+ * programming. This reduces the time to O(n) with O(n) space.
+ *
+ * Q14. Is there a method faster than O(n)?
+ * Yes. Matrix exponentiation or the fast doubling method computes F(n) in O(log n) time.
+ *
+ * Q15. Which approach is better for Fibonacci and why?
+ * The iterative approach, because it takes O(n) time and O(1) space and has no risk of stack
+ * overflow. The recursive version is easier to read because it follows the definition directly, but it is
+ * inefficient.
+ *
+ * Q16. Can every recursive program be written iteratively?
+ * Yes. Any recursion can be converted to a loop, sometimes with an explicit stack to replace the call
+ * stack.
+ *
+ * Q17. What is the largest n each program handles?
+ * With long, results are correct up to F(92). In practice the recursive program becomes too slow long
+ * before that (n around 45 already needs billions of calls), while the iterative program is instant.
+ *
+ * Conclusion
+ * Both programs give the same Fibonacci numbers. The iterative version grows linearly with n and
+ * uses constant space, while the recursive version grows exponentially because it recomputes the
+ * same values. The recursive version can be improved to O(n) time using memoization.
+ */

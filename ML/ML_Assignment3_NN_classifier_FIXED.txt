@@ -1,0 +1,336 @@
+# # Bank Customer Churn Prediction Using a Neural Network
+# 
+# **Objective:** Predict whether a bank customer will leave (`Exited = 1`) or stay (`Exited = 0`) using the Kaggle Bank Customer Churn Modelling dataset.
+# 
+# This notebook follows the assignment steps: load the dataset, separate features and target, split the data, normalize the features, build and improve a neural-network classifier, and evaluate it with accuracy and a confusion matrix.
+# 
+# **Note:** The dataset contains an `Exited` label but does not provide a separate time-to-churn field. The model therefore predicts the supplied churn label; it cannot independently verify a six-month prediction horizon.
+
+# ## 1. Import libraries
+# 
+# This corrected version uses Scikit-learn's `MLPClassifier`, which is a multilayer perceptron neural network. It avoids the TensorFlow/Keras installation problem recorded in the original notebook, while still satisfying the neural-network classifier requirement.
+# 
+# Install the dependencies once, if needed:
+# 
+# ```bash
+# pip install pandas numpy matplotlib seaborn scikit-learn
+# ```
+
+# ===== CELL 1 =====
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from IPython.display import display
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.utils import resample
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+)
+
+RANDOM_STATE = 42
+
+
+# ## 2. Read the dataset
+
+# ===== CELL 2 =====
+# Keep Churn_Modelling.csv in the same folder as this notebook,
+# or change the path below to the location of your CSV file.
+DATA_PATH = Path("Churn_Modelling.csv")
+
+if not DATA_PATH.is_file():
+    raise FileNotFoundError(
+        f"Could not find {DATA_PATH.resolve()}. "
+        "Place Churn_Modelling.csv in the notebook folder or update DATA_PATH."
+    )
+
+df = pd.read_csv(DATA_PATH)
+
+print("Dataset shape:", df.shape)
+display(df.head())
+
+
+# ===== CELL 3 =====
+# Basic dataset checks
+print("Dataset information:")
+df.info()
+
+print("\\nMissing values in each column:")
+display(df.isnull().sum())
+
+print("\\nDuplicate rows:", df.duplicated().sum())
+
+
+# ## 3. Preprocess the data and separate features and target
+
+# ===== CELL 4 =====
+# These columns identify a customer or row; they are not model features.
+columns_to_drop = ["RowNumber", "CustomerId", "Surname"]
+
+# Drop only identifier columns that are present.
+df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
+
+# Confirm that the target and expected predictors exist.
+required_columns = [
+    "CreditScore", "Geography", "Gender", "Age", "Tenure",
+    "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember",
+    "EstimatedSalary", "Exited"
+]
+missing_columns = [col for col in required_columns if col not in df.columns]
+if missing_columns:
+    raise ValueError(f"Dataset is missing required columns: {missing_columns}")
+
+# Handle missing values if present.
+for col in df.select_dtypes(include=np.number).columns:
+    df[col] = df[col].fillna(df[col].median())
+
+for col in df.select_dtypes(exclude=np.number).columns:
+    mode_values = df[col].mode()
+    if not mode_values.empty:
+        df[col] = df[col].fillna(mode_values.iloc[0])
+
+# Separate target and input features.
+y = df["Exited"].astype(int)
+X = df.drop(columns=["Exited"])
+
+# Convert Geography and Gender into numeric dummy variables.
+# drop_first=True avoids redundant dummy columns.
+X = pd.get_dummies(
+    X,
+    columns=["Geography", "Gender"],
+    drop_first=True,
+    dtype=int
+)
+
+print("Feature matrix shape:", X.shape)
+print("Target shape:", y.shape)
+print("\\nTarget distribution:")
+display(y.value_counts().rename(index={0: "Stayed (0)", 1: "Exited (1)"}))
+
+
+# ## 4. Visualize selected features
+
+# ===== CELL 5 =====
+def plot_churn_distribution(feature_name):
+    plt.figure(figsize=(8, 4))
+    sns.histplot(
+        data=df,
+        x=feature_name,
+        hue="Exited",
+        bins=25,
+        multiple="layer",
+        stat="count",
+        common_norm=False,
+        alpha=0.5
+    )
+    plt.title(f"{feature_name} distribution by churn status")
+    plt.xlabel(feature_name)
+    plt.ylabel("Number of customers")
+    plt.tight_layout()
+    plt.show()
+
+plot_churn_distribution("Tenure")
+plot_churn_distribution("Age")
+
+
+# ## 5. Split the dataset into training and testing sets
+
+# ===== CELL 6 =====
+# 70% training data and 30% testing data, preserving the churn ratio.
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.30,
+    random_state=RANDOM_STATE,
+    stratify=y
+)
+
+print("Training features:", X_train.shape)
+print("Testing features:", X_test.shape)
+print("Training target:", y_train.shape)
+print("Testing target:", y_test.shape)
+
+
+# ## 6. Normalize the training and testing data
+# 
+# Fit `StandardScaler` on the training data only. Use that same fitted scaler to transform the test data. This prevents information from the test set leaking into training.
+
+# ===== CELL 7 =====
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+print("Scaled training data:", X_train_scaled.shape)
+print("Scaled testing data:", X_test_scaled.shape)
+
+
+# ## 7. Build and train the baseline neural network
+# 
+# The baseline model is a multilayer perceptron with two hidden layers. The output layer uses a sigmoid-like probability (`predict_proba`) for the two churn classes.
+
+# ===== CELL 8 =====
+baseline_model = MLPClassifier(
+    hidden_layer_sizes=(6, 6),
+    activation="relu",
+    solver="adam",
+    alpha=0.0001,
+    max_iter=400,
+    random_state=RANDOM_STATE,
+    early_stopping=True,
+    validation_fraction=0.15,
+    n_iter_no_change=15
+)
+
+baseline_model.fit(X_train_scaled, y_train)
+
+baseline_predictions = baseline_model.predict(X_test_scaled)
+baseline_accuracy = accuracy_score(y_test, baseline_predictions)
+
+print(f"Baseline model accuracy: {baseline_accuracy:.4f} ({baseline_accuracy * 100:.2f}%)")
+
+
+# ## 8. Improve the model
+# 
+# The target is usually imbalanced: fewer customers leave than stay. The improved model therefore:
+# 
+# 1. **Balances the training data** by oversampling the minority class (training data only).
+# 2. Uses more hidden neurons to learn more complex patterns.
+# 3. Uses L2 regularization (`alpha`) to reduce overfitting.
+# 4. Uses early stopping to stop training when validation performance stops improving.
+# 
+# The test set is not oversampled, so evaluation reflects the original customer distribution.
+
+# ===== CELL 9 =====
+# Combine scaled training features and labels temporarily for resampling.
+train_for_resampling = pd.DataFrame(
+    X_train_scaled,
+    columns=X_train.columns
+)
+train_for_resampling["Exited"] = y_train.to_numpy()
+
+class_counts = train_for_resampling["Exited"].value_counts()
+majority_class = class_counts.idxmax()
+minority_class = class_counts.idxmin()
+
+majority_rows = train_for_resampling[
+    train_for_resampling["Exited"] == majority_class
+]
+minority_rows = train_for_resampling[
+    train_for_resampling["Exited"] == minority_class
+]
+
+# Increase the minority class to match the majority class.
+minority_oversampled = resample(
+    minority_rows,
+    replace=True,
+    n_samples=len(majority_rows),
+    random_state=RANDOM_STATE
+)
+
+balanced_train = pd.concat(
+    [majority_rows, minority_oversampled],
+    ignore_index=True
+).sample(frac=1, random_state=RANDOM_STATE)
+
+X_train_balanced = balanced_train.drop(columns=["Exited"]).to_numpy()
+y_train_balanced = balanced_train["Exited"].to_numpy()
+
+print("Original training class counts:")
+display(y_train.value_counts())
+print("Balanced training class counts:")
+display(pd.Series(y_train_balanced).value_counts())
+
+
+# ===== CELL 10 =====
+improved_model = MLPClassifier(
+    hidden_layer_sizes=(64, 32, 16),
+    activation="relu",
+    solver="adam",
+    alpha=0.001,
+    learning_rate_init=0.001,
+    max_iter=500,
+    random_state=RANDOM_STATE,
+    early_stopping=True,
+    validation_fraction=0.15,
+    n_iter_no_change=20
+)
+
+improved_model.fit(X_train_balanced, y_train_balanced)
+
+print("Improved neural network training completed.")
+print("Training iterations:", improved_model.n_iter_)
+
+
+# ## 9. Evaluate the model: accuracy score and confusion matrix
+
+# ===== CELL 11 =====
+# Predict the test set. predict() returns a one-dimensional class label array.
+y_pred = improved_model.predict(X_test_scaled)
+
+accuracy = accuracy_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+
+print(f"Improved model accuracy: {accuracy:.4f} ({accuracy * 100:.2f}%)")
+print("\\nConfusion matrix (rows = actual, columns = predicted):")
+print(cm)
+
+print("\\nClassification report:")
+print(
+    classification_report(
+        y_test,
+        y_pred,
+        labels=[0, 1],
+        target_names=["Customer Stayed", "Customer Exited"],
+        zero_division=0
+    )
+)
+
+
+# ===== CELL 12 =====
+plt.figure(figsize=(6, 5))
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=["Stayed (0)", "Exited (1)"],
+    yticklabels=["Stayed (0)", "Exited (1)"]
+)
+plt.xlabel("Predicted label")
+plt.ylabel("Actual label")
+plt.title("Bank Customer Churn - Confusion Matrix")
+plt.tight_layout()
+plt.show()
+
+
+# ## 10. Plot the training loss and compare models
+
+# ===== CELL 13 =====
+plt.figure(figsize=(8, 4))
+plt.plot(improved_model.loss_curve_)
+plt.xlabel("Training iteration")
+plt.ylabel("Loss")
+plt.title("Improved Neural Network Training Loss")
+plt.tight_layout()
+plt.show()
+
+print(f"Baseline accuracy : {baseline_accuracy * 100:.2f}%")
+print(f"Improved accuracy : {accuracy * 100:.2f}%")
+
+
+# ## Conclusion
+# 
+# A neural-network-based classifier was developed to predict whether a bank customer will stay or exit. The dataset was cleaned, categorical variables were encoded, and the features were normalized. The data was divided into training and testing sets.
+# 
+# The baseline MLP model was improved using minority-class oversampling, additional hidden layers, L2 regularization, and early stopping. The final model was evaluated using accuracy, a classification report, and a confusion matrix.
+# 
+# **Important:** Run all cells from top to bottom after placing `Churn_Modelling.csv` beside this notebook. The accuracy and confusion matrix printed by the notebook are the actual results for the dataset used; they should be copied into the assignment rather than estimated in advance.

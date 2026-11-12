@@ -1,0 +1,249 @@
+# # Implement K-Means clustering/ hierarchical clustering on sales_data_sample.csv dataset. Determine the number of clusters using the elbow method.
+
+# ===== CELL 1 =====
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+#Importing the required libraries.
+
+# ===== CELL 2 =====
+from sklearn.cluster import KMeans, k_means #For clustering
+from sklearn.decomposition import PCA #Linear Dimensionality reduction.
+
+# ===== CELL 3 =====
+df = pd.read_csv("sales_data_sample.csv", sep=",", encoding='Latin-1') #Loading the dataset.
+
+# ## Preprocessing
+
+# ===== CELL 4 =====
+df.head()
+
+# ===== CELL 5 =====
+df.shape
+
+# ===== CELL 6 =====
+df.describe()
+
+# ===== CELL 7 =====
+df.info()
+
+# ===== CELL 8 =====
+df.isnull().sum()
+
+# ===== CELL 9 =====
+df.dtypes
+
+# ===== CELL 10 =====
+df_drop  = ['ADDRESSLINE1', 'ADDRESSLINE2', 'STATUS','POSTALCODE', 'CITY', 'TERRITORY', 'PHONE', 'STATE', 'CONTACTFIRSTNAME', 'CONTACTLASTNAME', 'CUSTOMERNAME', 'ORDERNUMBER']
+df = df.drop(df_drop, axis=1) #Dropping the categorical uneccessary columns along with columns having null values. Can't fill the null values are there are alot of null values.
+
+# ===== CELL 11 =====
+df.isnull().sum()
+
+# ===== CELL 12 =====
+df.dtypes
+
+# ===== CELL 13 =====
+# Checking the categorical columns.
+
+# ===== CELL 14 =====
+df['COUNTRY'].unique()
+
+# ===== CELL 15 =====
+df['PRODUCTLINE'].unique()
+
+# ===== CELL 16 =====
+df['DEALSIZE'].unique()
+
+# ===== CELL 17 =====
+productline = pd.get_dummies(df['PRODUCTLINE']) #Converting the categorical columns.
+Dealsize = pd.get_dummies(df['DEALSIZE'])
+
+# ===== CELL 18 =====
+df = pd.concat([df,productline,Dealsize], axis = 1)
+
+# ===== CELL 19 =====
+df_drop  = ['COUNTRY','PRODUCTLINE','DEALSIZE'] #Dropping Country too as there are alot of countries.
+df = df.drop(df_drop, axis=1)
+
+# ===== CELL 20 =====
+df['PRODUCTCODE'] = pd.Categorical(df['PRODUCTCODE']).codes #Converting the datatype.
+
+# ===== CELL 21 =====
+df.drop('ORDERDATE', axis=1, inplace=True) #Dropping the Orderdate as Month is already included.
+
+# ===== CELL 22 =====
+df.dtypes #All the datatypes are converted into numeric
+
+# ## Plotting the Elbow Plot to determine the number of clusters.
+
+# ===== CELL 23 =====
+distortions = [] # Within Cluster Sum of Squares from the centroid
+K = range(1,10)
+for k in K:
+    kmeanModel = KMeans(n_clusters=k)
+    kmeanModel.fit(df)
+    distortions.append(kmeanModel.inertia_)   #Appeding the intertia to the Distortions
+
+# ===== CELL 24 =====
+plt.figure(figsize=(16,8))
+plt.plot(K, distortions, 'bx-')
+plt.xlabel('k')
+plt.ylabel('Distortion')
+plt.title('The Elbow Method showing the optimal k')
+plt.show()
+
+# ## As the number of k increases Inertia decreases.
+# ## Observations: A Elbow can be observed at 3 and after that the curve decreases gradually.
+
+# ===== CELL 25 =====
+X_train = df.values #Returns a numpy array.
+
+# ===== CELL 26 =====
+X_train.shape
+
+# ===== CELL 27 =====
+model = KMeans(n_clusters=3,random_state=2) #Number of cluster = 3
+model = model.fit(X_train) #Fitting the values to create a model.
+predictions = model.predict(X_train) #Predicting the cluster values (0,1,or 2)
+
+# ===== CELL 28 =====
+unique,counts = np.unique(predictions,return_counts=True)
+
+# ===== CELL 29 =====
+counts = counts.reshape(1,3)
+
+# ===== CELL 30 =====
+counts_df = pd.DataFrame(counts,columns=['Cluster1','Cluster2','Cluster3'])
+
+# ===== CELL 31 =====
+counts_df.head()
+
+# ## Visualization
+
+# ===== CELL 32 =====
+pca = PCA(n_components=2) #Converting all the features into 2 columns to make it easy to visualize using Principal COmponent Analysis.
+
+# ===== CELL 33 =====
+reduced_X = pd.DataFrame(pca.fit_transform(X_train),columns=['PCA1','PCA2']) #Creating a DataFrame.
+
+# ===== CELL 34 =====
+reduced_X.head()
+
+# ===== CELL 35 =====
+#Plotting the normal Scatter Plot
+plt.figure(figsize=(14,10))
+plt.scatter(reduced_X['PCA1'],reduced_X['PCA2'])
+
+# ===== CELL 36 =====
+model.cluster_centers_ #Finding the centriods. (3 Centriods in total. Each Array contains a centroids for particular feature )
+
+# ===== CELL 37 =====
+reduced_centers = pca.transform(model.cluster_centers_) #Transforming the centroids into 3 in x and y coordinates
+
+# ===== CELL 38 =====
+reduced_centers
+
+# ===== CELL 39 =====
+plt.figure(figsize=(14,10))
+plt.scatter(reduced_X['PCA1'],reduced_X['PCA2'])
+plt.scatter(reduced_centers[:,0],reduced_centers[:,1],color='black',marker='x',s=300) #Plotting the centriods
+
+# ===== CELL 40 =====
+reduced_X['Clusters'] = predictions #Adding the Clusters to the reduced dataframe.
+
+# ===== CELL 41 =====
+reduced_X.head()
+
+# ===== CELL 42 =====
+#Plotting the clusters
+plt.figure(figsize=(14,10))
+#                     taking the cluster number and first column           taking the same cluster number and second column      Assigning the color
+plt.scatter(reduced_X[reduced_X['Clusters'] == 0].loc[:,'PCA1'],reduced_X[reduced_X['Clusters'] == 0].loc[:,'PCA2'],color='slateblue')
+plt.scatter(reduced_X[reduced_X['Clusters'] == 1].loc[:,'PCA1'],reduced_X[reduced_X['Clusters'] == 1].loc[:,'PCA2'],color='springgreen')
+plt.scatter(reduced_X[reduced_X['Clusters'] == 2].loc[:,'PCA1'],reduced_X[reduced_X['Clusters'] == 2].loc[:,'PCA2'],color='indigo')
+
+
+plt.scatter(reduced_centers[:,0],reduced_centers[:,1],color='black',marker='x',s=300)
+
+# ==============================================================================
+# THEORY, VIVA Q&A, ALGORITHM AND COMPLEXITY - ASSIGNMENT 5 (K-Means Clustering on Sales Data, Elbow Method)
+#
+# 1. WHAT THIS PRACTICAL DOES
+# Goal: group the sales records into clusters (customer / order segments) with K-Means and find the best number of clusters with the elbow method. This is UNSUPERVISED learning, so there is no target label.
+# Dataset: sales_data_sample.csv (orders with quantity, price, sales, product line, deal size, country, etc.). It is read with encoding = "Latin-1" because it contains non-UTF-8 characters.
+# Steps in the code:
+#  a) Load and inspect the data (head, shape, describe, info, null counts, dtypes).
+#  b) Drop columns that are free text, identifiers or mostly missing: ADDRESSLINE1/2, STATUS, POSTALCODE, CITY, TERRITORY, PHONE, STATE, CONTACT names, CUSTOMERNAME, ORDERNUMBER.
+#  c) One-hot encode PRODUCTLINE and DEALSIZE, then drop the originals. Drop COUNTRY (too many values) and ORDERDATE (MONTH_ID and YEAR_ID already hold the information). Convert PRODUCTCODE to numeric category codes.
+#  d) Elbow method: run KMeans for k = 1 to 9 and store the inertia (distortion) of each. Plot k against inertia.
+#  e) The elbow is at k = 3, so fit KMeans with 3 clusters (random_state = 2) and predict the cluster of every row. Count the rows per cluster.
+#  f) Visualise: reduce all features to 2 components with PCA, then scatter plot the points, the 3 centroids and the clusters in different colours.
+#
+# 2. KEY CONCEPTS
+# - Clustering: grouping similar items without labels.
+# - K-Means: partitions the data into k clusters. Each cluster has a centroid (mean of its points). Every point belongs to the nearest centroid.
+# - Inertia / distortion / WCSS (Within-Cluster Sum of Squares): sum of squared distances from every point to its own centroid. K-Means minimises it.
+# - Elbow method: plot inertia against k. Inertia always falls as k grows, but after the "elbow" the improvement becomes small. The elbow point is a good k.
+# - k-means++ initialisation (the default in scikit-learn): picks well-spread starting centroids, which gives better and faster results than purely random starts.
+# - PCA (Principal Component Analysis): a linear dimensionality reduction that projects the data onto the directions of maximum variance. Used here only to draw high-dimensional data in 2D.
+# - Hierarchical (agglomerative) clustering: the assignment title also allows this. It starts with each point as its own cluster and repeatedly merges the two closest clusters; the result is drawn as a dendrogram.
+# - One-hot / category codes: convert text columns into numbers because K-Means needs numeric input.
+#
+# 3. ALGORITHM (K-Means, Lloyd's algorithm)
+#  1. Choose k (from the elbow method).
+#  2. Initialise k centroids (k-means++).
+#  3. Assignment step: assign every point to its nearest centroid (Euclidean distance).
+#  4. Update step: recompute each centroid as the mean of the points assigned to it.
+#  5. Repeat steps 3 and 4 until the assignments stop changing (or the maximum iterations are reached).
+#  6. Output: the cluster label for each point and the final centroids.
+# Elbow method
+#  1. For k = 1..9 run K-Means and record the inertia.
+#  2. Plot k against inertia and pick the k where the curve bends.
+# Hierarchical clustering (agglomerative), if asked
+#  1. Start with n clusters (one per point).
+#  2. Compute the distance matrix and merge the two closest clusters (single, complete, average or Ward linkage).
+#  3. Update the distances and repeat until one cluster is left. Cut the dendrogram at the desired height to get the clusters.
+#
+# 4. TIME AND SPACE COMPLEXITY  (n = points, d = features, k = clusters, I = iterations)
+# - K-Means: O(n * k * d * I) time. Space: O(n*d + k*d).
+# - Elbow loop for k = 1..9: it runs K-Means nine times, so the total is about O(n * d * I * (1+2+...+9)) = O(45 * n * d * I).
+# - Finding the global optimum is NP-hard; K-Means converges to a local minimum, which is why several initialisations (n_init) or a fixed random_state are used.
+# - PCA: O(n * d^2 + d^3) with the covariance / SVD method. Space O(n*d).
+# - Hierarchical clustering: O(n^3) time with the naive method, O(n^2 log n) with a priority queue. Space O(n^2) for the distance matrix. It is therefore not suitable for very large data, whereas K-Means scales almost linearly in n.
+# - get_dummies and dropping columns: O(n*d).
+#
+# 5. LIKELY VIVA QUESTIONS AND ANSWERS
+# Q1. What is clustering? How is it different from classification?
+# A. Clustering is unsupervised: it finds groups in unlabeled data. Classification is supervised: it learns from labeled data to predict a known label.
+# Q2. How does K-Means work?
+# A. It repeats two steps: assign each point to the nearest centroid, then move each centroid to the mean of its points, until nothing changes.
+# Q3. What is the elbow method?
+# A. Plot the inertia for different values of k and choose the k where the drop in inertia slows sharply (the "elbow"). Here that point is k = 3.
+# Q4. What is inertia?
+# A. The sum of squared distances between every point and the centroid of its cluster. Lower means tighter clusters.
+# Q5. Why does inertia always decrease as k increases?
+# A. More centroids mean each point is closer to some centroid. With k = n the inertia is 0, so inertia alone cannot pick k and we look for the elbow.
+# Q6. How else can you choose k?
+# A. Silhouette score, the gap statistic, the Davies-Bouldin index, or domain knowledge.
+# Q7. Why drop columns like ADDRESSLINE2, PHONE, STATE and so on?
+# A. They are text, identifiers or contain many missing values, so they do not help distance-based clustering.
+# Q8. Why one-hot encode PRODUCTLINE and DEALSIZE?
+# A. K-Means needs numbers. One-hot columns turn categories into 0/1 without implying an order.
+# Q9. Why use PCA before plotting?
+# A. The data has many dimensions and cannot be drawn directly. PCA compresses it to 2 components that keep as much variance as possible, so the clusters can be visualised.
+# Q10. Does K-Means need scaling?
+# A. Yes, in general. K-Means uses Euclidean distance, so columns with big numbers (SALES, MSRP) dominate columns with small numbers. In this notebook the features were not scaled, so the clusters are driven mostly by the large-valued columns. Applying StandardScaler before KMeans is a good improvement to mention.
+# Q11. What are the limitations of K-Means?
+# A. You must choose k in advance, it is sensitive to the starting centroids and to outliers, it assumes roughly spherical clusters of similar size, and it needs numeric data.
+# Q12. What is k-means++?
+# A. A smart initialisation that picks the first centroid at random and each next centroid with probability proportional to its squared distance from the nearest chosen centroid. It spreads the starting centroids out.
+# Q13. What is hierarchical clustering and how does it differ from K-Means?
+# A. It builds a tree (dendrogram) by repeatedly merging the closest clusters; you do not need to give k in advance (you cut the tree). It is slower, O(n^2) or worse, but gives a full hierarchy. K-Means is faster and needs k up front.
+# Q14. What is a centroid?
+# A. The mean position of all points in a cluster.
+# Q15. How do you decide whether the clustering is good?
+# A. Look at inertia, the silhouette score (between -1 and 1; higher is better), the cluster sizes, and whether the clusters make business sense (for example high-value large orders vs small orders).
+# Q16. What does random_state do?
+# A. It fixes the random initialisation, so you get the same clusters on every run.

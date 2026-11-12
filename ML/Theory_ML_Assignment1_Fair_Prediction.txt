@@ -1,0 +1,358 @@
+# ===== CELL 1 =====
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+# ===== CELL 2 =====
+uber = pd.read_csv('uber.csv')
+
+# ===== CELL 3 =====
+uber.head()
+
+# ===== CELL 4 =====
+uber.info()
+
+# ===== CELL 5 =====
+uber.isnull().sum()
+
+# ===== CELL 6 =====
+uber_2 = uber.drop(['Unnamed: 0','key'],axis=1)
+uber_2.dropna(axis=0,inplace=True)
+
+# ===== CELL 7 =====
+uber_2.isnull().sum()
+
+# ===== CELL 8 =====
+def haversine (lon_1, lon_2, lat_1, lat_2):
+
+    lon_1, lon_2, lat_1, lat_2 = map(np.radians, [lon_1, lon_2, lat_1, lat_2])  #Degrees to Radians
+
+
+    diff_lon = lon_2 - lon_1
+    diff_lat = lat_2 - lat_1
+
+
+    km = 2 * 6371 * np.arcsin(np.sqrt(np.sin(diff_lat/2.0)**2 +
+                                      np.cos(lat_1) * np.cos(lat_2) * np.sin(diff_lon/2.0)**2))
+
+    return km
+
+
+# ===== CELL 9 =====
+uber_2['Distance']= haversine(uber_2['pickup_longitude'],uber_2['dropoff_longitude'],
+                             uber_2['pickup_latitude'],uber_2['dropoff_latitude'])
+
+uber_2['Distance'] = uber_2['Distance'].astype(float).round(2)    # Round-off Optional
+
+# ===== CELL 10 =====
+uber_2.head()
+
+# ===== CELL 11 =====
+plt.scatter(uber_2['Distance'], uber_2['fare_amount'])
+plt.xlabel("Distance")
+plt.ylabel("fare_amount")
+
+# ===== CELL 12 =====
+uber_2.drop(uber_2[uber_2['Distance'] > 60].index, inplace = True)
+uber_2.drop(uber_2[uber_2['Distance'] == 0].index, inplace = True)
+uber_2.drop(uber_2[uber_2['fare_amount'] == 0].index, inplace = True)
+uber_2.drop(uber_2[uber_2['fare_amount'] < 0].index, inplace = True)
+
+# ===== CELL 13 =====
+uber_2.drop(uber_2[(uber_2['fare_amount']>100) & (uber_2['Distance']<1)].index, inplace = True )
+uber_2.drop(uber_2[(uber_2['fare_amount']<100) & (uber_2['Distance']>100)].index, inplace = True )
+
+# ===== CELL 14 =====
+uber_2.info()
+
+# ===== CELL 15 =====
+plt.scatter(uber_2['Distance'], uber_2['fare_amount'])
+plt.xlabel("Distance")
+plt.ylabel("fare_amount")
+
+# ===== CELL 16 =====
+uber_2['pickup_datetime'] = pd.to_datetime(uber_2['pickup_datetime'])
+
+uber_2['Year'] = uber_2['pickup_datetime'].apply(lambda time: time.year)
+uber_2['Month'] = uber_2['pickup_datetime'].apply(lambda time: time.month)
+uber_2['Day'] = uber_2['pickup_datetime'].apply(lambda time: time.day)
+uber_2['Day of Week'] = uber_2['pickup_datetime'].apply(lambda time: time.dayofweek)
+uber_2['Day of Week_num'] = uber_2['pickup_datetime'].apply(lambda time: time.dayofweek)
+uber_2['Hour'] = uber_2['pickup_datetime'].apply(lambda time: time.hour)
+
+day_map = {0:'Mon',1:'Tue',2:'Wed',3:'Thu',4:'Fri',5:'Sat',6:'Sun'}
+uber_2['Day of Week'] = uber_2['Day of Week'].map(day_map)
+
+uber_2['counter'] = 1
+
+# ===== CELL 17 =====
+uber_2['pickup'] = uber_2['pickup_latitude'].astype(str) + "," + uber_2['pickup_longitude'].astype(str)
+uber_2['drop off'] = uber_2['dropoff_latitude'].astype(str) + "," + uber_2['dropoff_longitude'].astype(str)
+
+# ===== CELL 18 =====
+uber_2.head()
+
+# ===== CELL 19 =====
+no_of_trips = []
+year = [2009, 2010, 2011, 2012, 2013, 2014, 2015]
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+for i in range(2009, 2016):
+    x = uber_2.loc[uber_2['Year'] == i, 'counter'].sum()
+    no_of_trips.append(x)
+
+print("Average trips a year: ")
+print(year, no_of_trips)
+
+plt.bar(year, no_of_trips, color=colors)
+
+# ===== CELL 20 =====
+no_of_trips = []
+month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+for i in range(1, 13):
+    x = uber_2.loc[uber_2['Month'] == i, 'counter'].sum()
+    no_of_trips.append(x)
+
+print("Average trips a Month: ")
+print(month, no_of_trips)
+
+plt.bar(month, no_of_trips, color=colors)
+
+# ===== CELL 21 =====
+no_of_trips = []
+day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+for i in range(0, 7):
+    x = uber_2.loc[uber_2['Day of Week_num'] == i, 'counter'].sum()
+    no_of_trips.append(x)
+
+print("Average trips by Days: ")
+print(day, no_of_trips)
+
+plt.bar(day, no_of_trips, color=colors)
+
+# ===== CELL 22 =====
+year_vs_trips = uber_2.groupby(['Year','Month']).agg(
+    no_of_trips = ('counter','count'),
+    Average_fair = ('fare_amount','mean'),
+    Total_fair = ('fare_amount','sum'),
+    Avg_distance = ( 'Distance', 'mean')).reset_index()
+
+year_vs_trips['avg_no_of_trips'] = year_vs_trips['no_of_trips']/30
+year_vs_trips['month_year'] = year_vs_trips['Month'].astype(str) +", "+ year_vs_trips['Year'].astype(str)
+
+
+year_vs_trips = year_vs_trips.reset_index()
+
+year_vs_trips.head()
+
+
+year_vs_trips.plot(kind='line',x='month_year',y='no_of_trips', xlabel='January, 2009 - June, 2015',
+    ylabel='No of Trips', title='No of trips vs Months')
+
+# ===== CELL 23 =====
+import seaborn as sns
+
+df_1 = uber_2[['Distance', 'Day of Week_num', 'Hour']].copy()
+
+df_h = df_1.copy()
+
+df_h = df_h.groupby(['Hour', 'Day of Week_num']).mean()
+df_h = df_h.unstack(level=0)
+
+# ===== CELL 24 =====
+fig, ax = plt.subplots(figsize=(24, 7))
+sns.heatmap(df_h, cmap="Reds",
+           linewidth=0.3, cbar_kws={"shrink": .8})
+
+xticks_labels = ['12 AM', '01 AM', '02 AM ', '03 AM ', '04 AM ', '05 AM ', '06 AM ', '07 AM ',
+                 '08 AM ', '09 AM ', '10 AM ', '11 AM ', '12 PM ', '01 PM ', '02 PM ', '03 PM ',
+                 '04 PM ', '05 PM ', '06 PM ', '07 PM ', '08 PM ', '09 PM ', '10 PM ', '11 PM ']
+
+yticks_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+
+plt.xticks(np.arange(24) + .5, labels=xticks_labels)
+plt.yticks(np.arange(7) + .5, labels=yticks_labels)
+
+ax.xaxis.tick_top()
+
+title = 'Weekly Uber Rides'.upper()
+plt.title(title, fontdict={'fontsize': 25})
+
+plt.show()
+
+# ===== CELL 25 =====
+import statistics as st
+
+print("Mean of fare prices is % s "
+         % (st.mean(uber_2['fare_amount'])))
+
+print("Median of fare prices is % s "
+         % (st.median(uber_2['fare_amount'])))
+
+print("Standard Deviation of Fare Prices is % s "
+                % (st.stdev(uber_2['fare_amount'])))
+
+# ===== CELL 26 =====
+import statistics as st
+
+print("Mean of Distance is % s "
+         % (st.mean(uber_2['Distance'])))
+
+print("Median of Distance is % s "
+         % (st.median(uber_2['Distance'])))
+
+print("Standard Deviation of Distance is % s "
+                % (st.stdev(uber_2['Distance'])))
+
+# ===== CELL 27 =====
+corr = uber_2.select_dtypes(include=[np.number]).corr()
+
+corr.style.background_gradient(cmap='BuGn')
+
+# ===== CELL 28 =====
+X = uber_2['Distance'].values.reshape(-1, 1)        #Independent Variable
+y = uber_2['fare_amount'].values.reshape(-1, 1)     #Dependent Variable
+
+# ===== CELL 29 =====
+from sklearn.preprocessing import StandardScaler
+std = StandardScaler()
+y_std = std.fit_transform(y)
+print(y_std)
+
+x_std = std.fit_transform(X)
+print(x_std)
+
+# ===== CELL 30 =====
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(x_std, y_std, test_size=0.2, random_state=0)
+
+# ===== CELL 31 =====
+from sklearn.linear_model import LinearRegression
+l_reg = LinearRegression()
+l_reg.fit(X_train, y_train)
+
+print("Training set score: {:.2f}".format(l_reg.score(X_train, y_train)))
+print("Test set score: {:.7f}".format(l_reg.score(X_test, y_test)))
+
+# ===== CELL 32 =====
+y_pred = l_reg.predict(X_test)
+df = {'Actual': y_test, 'Predicted': y_pred}
+
+from tabulate import tabulate
+print(tabulate(df, headers = 'keys', tablefmt = 'psql'))
+
+# ===== CELL 33 =====
+from sklearn import metrics
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))
+#print('Mean Absolute % Error:', metrics.mean_absolute_percentage_error(y_test, y_pred))
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+
+# ===== CELL 34 =====
+print(l_reg.intercept_)
+print(l_reg.coef_)
+
+# ===== CELL 35 =====
+plt.subplot(2, 2, 1)
+plt.scatter(X_train, y_train, color = 'red')
+plt.plot(X_train, l_reg.predict(X_train), color ="blue")
+plt.title("Fare vs Distance (Training Set)")
+plt.ylabel("fare_amount")
+plt.xlabel("Distance")
+
+plt.subplot(2, 2, 2)
+plt.scatter(X_test, y_test, color = 'red')
+plt.plot(X_train, l_reg.predict(X_train), color ="blue")
+plt.ylabel("fare_amount")
+plt.xlabel("Distance")
+plt.title("Fare vs Distance (Test Set)")
+
+
+plt.tight_layout()
+plt.rcParams["figure.figsize"] = (32,22)
+plt.show()
+
+# ==============================================================================
+# THEORY, VIVA Q&A, ALGORITHM AND COMPLEXITY - ASSIGNMENT 1 (Uber Fare Prediction, Linear Regression)
+#
+# 1. WHAT THIS PRACTICAL DOES
+# Goal: predict the Uber fare (fare_amount) from the trip distance.
+# Steps in the code:
+#  a) Load uber.csv and drop the useless columns 'Unnamed: 0' and 'key'. Drop rows with missing values (dropna).
+#  b) Compute the trip distance from pickup/dropoff latitude and longitude using the Haversine formula.
+#  c) Remove outliers: distance > 60 km, distance = 0, fare <= 0, fare > 100 with distance < 1, fare < 100 with distance > 100.
+#  d) Feature engineering from pickup_datetime: Year, Month, Day, Day of Week, Hour.
+#  e) Exploratory analysis: trips per year / month / weekday, hour-vs-weekday heat map, mean/median/std, correlation matrix.
+#  f) X = Distance (independent), y = fare_amount (dependent). Standardise both with StandardScaler.
+#  g) Train/test split 80/20, fit LinearRegression, print R2 score, MAE, MSE, RMSE, intercept, coefficient. Plot the fitted line.
+#
+# 2. KEY CONCEPTS
+# - Linear regression: models y = b0 + b1*x + error. b0 = intercept, b1 = slope (coefficient). Fitted by Ordinary Least Squares (OLS), which minimises the sum of squared residuals.
+# - Haversine formula: great-circle distance between two points on a sphere:
+#     a = sin^2(dlat/2) + cos(lat1)*cos(lat2)*sin^2(dlon/2)
+#     distance = 2 * R * arcsin(sqrt(a)),  R = 6371 km (Earth radius).
+#   Needed because latitude/longitude are angles, not straight-line coordinates. The code first converts degrees to radians.
+# - Outliers: GPS errors give fares like negative values or 0 distance with a huge fare. They pull the regression line, so they are removed.
+# - StandardScaler: z = (x - mean) / std, so the data has mean 0 and std 1.
+# - R2 score: fraction of variance in y explained by the model. 1 = perfect, 0 = no better than predicting the mean.
+# - MAE = mean(|y - y_hat|). MSE = mean((y - y_hat)^2). RMSE = sqrt(MSE), in the same units as y.
+#
+# 3. ALGORITHM (step by step)
+#  1. Read the CSV; drop identifier columns; drop rows with NaN.
+#  2. For every row compute Distance with the Haversine formula.
+#  3. Filter out invalid / impossible rows (see 1c).
+#  4. Extract Year, Month, Day, Day of Week, Hour from pickup_datetime.
+#  5. Set X = Distance, y = fare_amount; standardise both.
+#  6. Split into 80% train and 20% test (random_state = 0 for repeatability).
+#  7. Fit OLS: find the slope and intercept that minimise sum((y_i - (b0 + b1*x_i))^2).
+#     For simple regression: b1 = sum((x - x_mean)(y - y_mean)) / sum((x - x_mean)^2), b0 = y_mean - b1 * x_mean.
+#  8. Predict on the test set: y_hat = b0 + b1 * x.
+#  9. Evaluate with R2, MAE, MSE, RMSE.
+#
+# 4. TIME AND SPACE COMPLEXITY  (n = number of rows, d = number of features; here d = 1)
+# - Haversine distance for all rows: time O(n), space O(n).
+# - Outlier filtering, date feature extraction, group-by statistics: time O(n).
+# - StandardScaler: time O(n*d), space O(n*d).
+# - Linear regression training (OLS): time O(n*d^2 + d^3) (the d^3 term comes from solving the normal equations), space O(n*d). For d = 1 this is effectively O(n).
+# - Prediction: O(d) per sample, so O(m*d) for m test samples.
+# - Closed-form OLS needs no iterations. Gradient-descent regression instead costs O(iterations * n * d).
+#
+# 5. LIKELY VIVA QUESTIONS AND ANSWERS
+# Q1. What is regression and why linear regression here?
+# A. Regression predicts a continuous value. Fare changes roughly in proportion to distance, so a straight line is a reasonable first model.
+# Q2. Why did you use the Haversine formula and not Euclidean distance?
+# A. Latitude/longitude are angles on a sphere. Euclidean distance on degrees is wrong, and the error grows with distance. Haversine gives the real surface distance in km.
+# Q3. Which variable is dependent and which is independent?
+# A. Distance is independent (X); fare_amount is dependent (y).
+# Q4. Why remove outliers?
+# A. Linear regression minimises squared error, so a few extreme points (negative fares, 0 km trips with big fares) pull the line away from the real trend and lower the score.
+# Q5. Why scale the data? Is it required for linear regression?
+# A. Not strictly required for plain OLS (the predictions are the same). It matters for gradient-based and distance-based algorithms and keeps the coefficients comparable. Here it is a good-practice step.
+# Q6. What does the R2 score tell you?
+# A. The share of the fare variation explained by distance. Closer to 1 is better. A low R2 means other factors (time of day, traffic, tolls, passengers) also matter.
+# Q7. Difference between MAE, MSE and RMSE?
+# A. MAE averages absolute errors. MSE averages squared errors, so it punishes big errors more. RMSE is the square root of MSE and is in the same units as the target.
+# Q8. What are the intercept and the coefficient?
+# A. The intercept is the predicted value when X = 0. The coefficient (slope) is the change in fare for one unit change in distance. Because both were standardised, the values are in standard-deviation units.
+# Q9. What are the assumptions of linear regression?
+# A. Linear relationship, independent errors, constant error variance (homoscedasticity), normally distributed errors, and no strong multicollinearity (for several features).
+# Q10. What does the correlation matrix show?
+# A. The linear relationship between each pair of numeric columns, from -1 to +1. Fare and Distance should be strongly positive.
+# Q11. How can the model be improved?
+# A. Add features (hour, day of week, passenger count, pickup zone), try polynomial regression or tree-based models, and handle outliers more carefully.
+# Q12. What is overfitting? How do you check it?
+# A. The model fits the training data too well and fails on new data. Compare the train score with the test score; a large gap means overfitting.
+# Q13. Why split into training and testing sets?
+# A. To measure performance on data the model has never seen.
+# Q14. Why a heat map of weekday vs hour?
+# A. It shows the busiest times of the week at a glance, so it supports the exploratory analysis.
